@@ -7,7 +7,7 @@ def graficarChapa(T,Nx,Ny):
     fig, ax = plt.subplots(figsize=(8, 6))
 
     numSeparaciones = 100  
-    numLineas = 10     
+    numLineas = 16     
 
     mappable = ax.contourf(T.reshape(Nx, Ny), levels=numSeparaciones, origin='upper', cmap='plasma')
 
