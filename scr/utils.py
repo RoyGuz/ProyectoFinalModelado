@@ -27,3 +27,28 @@ def graficarChapa(T,Nx,Ny):
     plt.show()
 
     return
+
+#....................................................................................................................
+
+from tabulate import tabulate
+
+def mostrar_tabla_variables_ordenada(cond_contor, typ_cond_contorno, hot_point, material_nombre):
+
+    print("\n=== Condiciones de Contorno ===")
+
+    tabla_contorno = []
+    for borde in cond_contor.keys():
+        tipo = typ_cond_contorno.get(borde, 'No definido')
+        valor = cond_contor[borde]
+        tabla_contorno.append([borde, tipo, valor])
+
+    print(tabulate(tabla_contorno, headers=["Borde", "Tipo de condición", "Valor"], tablefmt="grid"))
+
+    print("\n=== Punto Caliente ===")
+
+    tabla_hot = []
+
+    tabla_hot = [[hot_point['i'], hot_point['j'], hot_point['T']]]
+    print(tabulate(tabla_hot, headers=["i", "j", "Temp"], tablefmt="grid"))
+
+    print(f"\nMaterial: {material_nombre}")
