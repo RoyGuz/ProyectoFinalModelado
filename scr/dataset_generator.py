@@ -1,5 +1,11 @@
+import sys
+sys.path.append('C:/Users/royer/Documents/ProyectoFinalModelado/scr')
+from solver_fd import temp_chapa_P
+
 import pandas as pd
 import numpy as np
+import os
+
 
 def variables(Nx, Ny):
 
@@ -59,18 +65,137 @@ def variables(Nx, Ny):
         typ_cond_contorno[borde] = tipo
 
         if tipo == 'temp':
-            valor = np.random.uniform(T_min, T_max)
+            valor = round(np.random.uniform(T_min, T_max),3)
         elif tipo == 'flu':
-            valor = np.random.uniform(q_min, q_max)
+            valor = round(np.random.uniform(q_min, q_max),3)
         
         cond_contor[borde] = valor
 
     #   Se generan los datos del punto caliente
     i_hp = np.random.randint(0, Nx)
     j_hp = np.random.randint(0, Ny)
-    T_hp = np.random.uniform(T_min, T_max)
+    T_hp = round(np.random.uniform(T_min, T_max),3)
+
     
     hot_point = {'i': i_hp, 'j': j_hp, 'T': T_hp}
 
     return cond_contor, typ_cond_contorno, hot_point, k, material_nombre
 
+#..............................................................................................................................................................
+#..............................................................................................................................................................
+
+def generar_dataset(n_muestras, Nx, Ny, dx, dy, subfolder_name = None):
+    """
+    Esta funcion genera los datos necesarios para el entrenamiento de la Red Neuronal, toma un conjunto de datos
+    de entrada, que se generan aleatoriamente con la funcion "variables", y los evalua en la funcion temp_chapa_P. 
+    Los datos de salida junto con los de entrada se guardan en archivos .npy y tambien se genera un registro de todas 
+    las combinaciones simuladas. 
+
+    Ingresa: 
+        n_muestras (int): Cantidad de muestras para simulacion.
+        Nx (int): Cantidad de nodos de la placa en la direccion x
+        Ny (int): Cantidad de nodos de la placa en la direccion y
+        dx (float): Distancia entre nodos de la placa en la direccion x - [m]
+        dy (float): Distancia entre nodos de la placa en la direccion y - [m]
+
+    Retorna:
+        No se retorna ninguna variable.
+    
+    Se generan 3 archivos:
+        X (.npy): Datos de entrada para la Red Neuronal
+        Y (.npy): Datos de salida para la Red Neuronal
+        registros (.csv): Combinaciones simuladas 
+
+    """
+    #   Se definen las variables donde se almacenaran los datos para cada combinacion
+    X = []
+    Y = []
+    registros = []
+
+
+    #   Bucle principal
+    for i in range(n_muestras):
+
+        #   Genero mis variables aleatorias
+        cond_contor, typ_cond_contorno, hot_point, k, material_nombre = variables(Nx, Ny)
+        
+        #......................... DATOS DE ENTRADA ......................................
+        tipo_map = {'temp': 0, 'flu': 1}
+
+        tipo_A = tipo_map[typ_cond_contorno['A']]
+        tipo_B = tipo_map[typ_cond_contorno['B']]
+        tipo_C = tipo_map[typ_cond_contorno['C']]
+        tipo_D = tipo_map[typ_cond_contorno['D']]
+        
+        x_muestra = [
+
+            k,
+            hot_point['T'],
+            hot_point['i'],
+            hot_point['j'],
+            tipo_A,
+            tipo_B,
+            tipo_C,
+            tipo_D,
+            cond_contor['A'],
+            cond_contor['B'],
+            cond_contor['C'],
+            cond_contor['D']
+
+        ]
+        X.append(x_muestra)
+
+        #.................... DATOS DE SALIDA .........................................
+        #   Se calcula la distribucion de temperatura 
+        T = temp_chapa_P(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point)
+
+        y_muestra = T.flatten() 
+        Y.append(y_muestra)
+        
+        #.................... REGISTROS DE CADA COMBINACION ...........................
+        registros.append({
+
+            'material': material_nombre,
+            'k': k,
+            'T_hp': hot_point['T'],
+            'i_hp': hot_point['i'],
+            'j_hp': hot_point['j'],
+            'tipo_A': typ_cond_contorno['A'],
+            'tipo_B': typ_cond_contorno['B'],
+            'tipo_C': typ_cond_contorno['C'],
+            'tipo_D': typ_cond_contorno['D'],
+            'valor_A': cond_contor['A'],
+            'valor_B': cond_contor['B'],
+            'valor_C': cond_contor['C'],
+            'valor_D': cond_contor['D']
+
+        })
+
+        if i % 50 == 0:
+            print(f"Se tienen {i}/{n_muestras} muestras generadas.")
+
+    #................................ ACONDICIONAMIENTO DE DATOS .........................................................
+    X = np.array(X)
+    Y = np.array(Y)    
+    df_registros = pd.DataFrame(registros)# Para convertir el diccionario "registros" en una fila para guardar.
+
+    #................................ ALMACENAMIENTO DE DATOS .............................................................
+    #   Defino la carpeta donde se guardaran los datos
+    base_folder = 'C:/Users/royer/Documents/ProyectoFinalModelado/data/'
+
+    if subfolder_name is not None:
+
+        save_folder = os.path.join(base_folder, subfolder_name)#    Genero la ruta de guardado ... Ej: 'C:/Users/royer/Documents/ProyectoFinalModelado/data/dataset_5000_test/'
+
+        if not os.path.exists(save_folder):
+            os.makedirs(save_folder)
+            print(f'Se creo la carpeta: {save_folder}')
+    else:
+        save_folder = base_folder#  Esto es por si no se indico ninguna ruta
+
+    # Guardado de archivos
+    np.save(os.path.join(save_folder, 'X.npy'), X)
+    np.save(os.path.join(save_folder, 'Y.npy'), Y)
+    df_registros.to_csv(os.path.join(save_folder, 'dataset_variables.csv'), index=False, sep=';')
+
+    print(f"Se genero el Dataset completo con {n_muestras} muestras y guardado en {save_folder}.")
