@@ -53,7 +53,7 @@ def temp_chapa_P(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
                     A[idx, :] = 0
                     A[idx, idx] = -1
                     A[idx, index(i, j+1,Nx)] = 1
-                    b[idx] = dx * cond_contor['A'] / k
+                    b[idx] = dy * cond_contor['A'] / k
 
             elif j == Ny-1:  # Borde inferior C
                 if typ_cond_contorno['C'] == 'temp':
@@ -64,7 +64,7 @@ def temp_chapa_P(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
                     A[idx, :] = 0
                     A[idx, idx] = 1
                     A[idx, index(i, j-1,Nx)] = -1
-                    b[idx] = dx * cond_contor['C'] / k
+                    b[idx] = dy * cond_contor['C'] / k
 
             elif i == 0:  # Borde izquierdo D
                 if typ_cond_contorno['D'] == 'temp':
