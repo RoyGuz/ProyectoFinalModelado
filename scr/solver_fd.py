@@ -35,7 +35,7 @@ def temp_chapa_P(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
     for j in range(Ny):
         for i in range(Nx):
             
-            idx = index(i, j,Nx)
+            idx = index(i, j,Nx)#   Indice 1D asociado el punto (i,j)
 
             if hot_point is not None and i == hot_point['i'] and j == hot_point['j']:
                 A[idx, :] = 0
@@ -43,6 +43,73 @@ def temp_chapa_P(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
                 b[idx] = hot_point['T']
                 continue
 
+            # ========== ESQUINAS: TEMP-TEMP y FLUJO-FLUJO ==========
+
+            esquina = False
+
+            # Esquina superior izquierda (A y D)
+            if i == 0 and j == 0:
+                if typ_cond_contorno['A'] == 'temp' and typ_cond_contorno['D'] == 'temp':
+                    A[idx, :] = 0
+                    A[idx, idx] = 1
+                    b[idx] = 0.5 * (cond_contor['A'] + cond_contor['D'])
+                    esquina = True
+                elif typ_cond_contorno['A'] == 'flu' and typ_cond_contorno['D'] == 'flu':
+                    A[idx, :] = 0
+                    A[idx, idx] = -2
+                    A[idx, index(i+1, j, Nx)] = 1
+                    A[idx, index(i, j+1, Nx)] = 1
+                    b[idx] = (dy * cond_contor['A'] + dx * cond_contor['D']) / k
+                    esquina = True
+
+            # Esquina superior derecha (A y B)
+            if i == Nx-1 and j == 0:
+                if typ_cond_contorno['A'] == 'temp' and typ_cond_contorno['B'] == 'temp':
+                    A[idx, :] = 0
+                    A[idx, idx] = 1
+                    b[idx] = 0.5 * (cond_contor['A'] + cond_contor['B'])
+                    esquina = True
+                elif typ_cond_contorno['A'] == 'flu' and typ_cond_contorno['B'] == 'flu':
+                    A[idx, :] = 0
+                    A[idx, idx] = -2
+                    A[idx, index(i-1, j, Nx)] = 1
+                    A[idx, index(i, j+1, Nx)] = 1
+                    b[idx] = (dy * cond_contor['A'] + dx * cond_contor['B']) / k
+                    esquina = True
+
+            # Esquina inferior derecha (C y B)
+            if i == Nx-1 and j == Ny-1:
+                if typ_cond_contorno['C'] == 'temp' and typ_cond_contorno['B'] == 'temp':
+                    A[idx, :] = 0
+                    A[idx, idx] = 1
+                    b[idx] = 0.5 * (cond_contor['C'] + cond_contor['B'])
+                    esquina = True
+                elif typ_cond_contorno['C'] == 'flu' and typ_cond_contorno['B'] == 'flu':
+                    A[idx, :] = 0
+                    A[idx, idx] = -2
+                    A[idx, index(i-1, j, Nx)] = 1
+                    A[idx, index(i, j-1, Nx)] = 1
+                    b[idx] = (dy * cond_contor['C'] + dx * cond_contor['B']) / k
+                    esquina = True
+
+            # Esquina inferior izquierda (C y D)
+            if i == 0 and j == Ny-1:
+                if typ_cond_contorno['C'] == 'temp' and typ_cond_contorno['D'] == 'temp':
+                    A[idx, :] = 0
+                    A[idx, idx] = 1
+                    b[idx] = 0.5 * (cond_contor['C'] + cond_contor['D'])
+                    esquina = True
+                elif typ_cond_contorno['C'] == 'flu' and typ_cond_contorno['D'] == 'flu':
+                    A[idx, :] = 0
+                    A[idx, idx] = -2
+                    A[idx, index(i+1, j, Nx)] = 1
+                    A[idx, index(i, j-1, Nx)] = 1
+                    b[idx] = (dy * cond_contor['C'] + dx * cond_contor['D']) / k
+                    esquina = True
+
+            if esquina:
+                continue  # Evitar procesar nuevamente el nodo           
+           
             # BORDES
             if j == 0:  # Borde superior A
                 if typ_cond_contorno['A'] == 'temp':
@@ -99,3 +166,204 @@ def temp_chapa_P(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
     T = T.reshape((Ny, Nx))
 
     return T
+
+#.....................................................................................................................................
+#.....................................................................................................................................
+
+def temp_chapa_P2(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
+
+    """
+    Resuelve el problema de conducción estacionaria 2D en una placa mediante diferencias finitas (VERSION ORIGINAL).
+
+            SE TIENE EL PROBLEMA DE LA INTERPRETACION DE LOS FLUJOS ... NO LOGRO IDENTIFICAR QUE ESTA MAL ... 
+            SI PONGO CONDICION DE 4 FLUJOS EN LOS BORDES ... SE PIERDE LA INFLUENCIA DEL PUNTO CALIENTE
+
+    Parámetros:
+
+        cond_contor (dict): Diccionario con condiciones de contorno ('A', 'B', 'C', 'D').
+        Nx, Ny (int): Número de nodos en x e y.
+        typ_cond_contorno (dict): Tipo de condición para cada borde: 'temp' o 'flu'.
+        dx, dy (float): Tamaños de paso en x e y.
+        k (float): Conductividad térmica.
+        hot_point (dict or None): Punto caliente, con claves 'i', 'j', 'T'.
+
+    Retorna:
+        T: Matriz (Ny, Nx) con la distribución de temperatura.
+    """
+    
+    beta = Nx / Ny
+
+    # ...................... ARMADO DE LA MATRIZ A ..............................................................
+
+    filas_internas = np.arange(1, Ny - 1)
+    columnas_internas = np.arange(1, Nx - 1)
+    indices_filas_int, indices_columnas_int = np.meshgrid(filas_internas, columnas_internas, indexing='ij')
+    flat_indices = np.ravel_multi_index((indices_filas_int.flatten(), indices_columnas_int.flatten()), (Nx, Ny))
+
+    A = np.eye(Nx * Ny)
+    A[flat_indices, flat_indices] = -2 * (1 + beta ** 2)
+    A[flat_indices, flat_indices - 1] = 1
+    A[flat_indices, flat_indices + 1] = 1
+    A[flat_indices, flat_indices - Nx] = beta ** 2
+    A[flat_indices, flat_indices + Nx] = beta ** 2
+
+
+
+    b = np.zeros((Nx, Ny))
+
+    # ................. BORDE A / BORDE D .........................................................
+
+    if typ_cond_contorno['A'] == 'temp' and typ_cond_contorno['D'] == 'flu':
+        b[0, 0] = cond_contor['A']
+    elif typ_cond_contorno['A'] == 'flu' and typ_cond_contorno['D'] == 'temp':
+        b[0, 0] = cond_contor['D']
+    elif typ_cond_contorno['A'] == 'temp' and typ_cond_contorno['D'] == 'temp':
+        b[0, 0] = (cond_contor['A'] + cond_contor['D']) / 2
+
+    if typ_cond_contorno['A'] == 'temp':
+        b[0, 1:Nx - 1] = cond_contor['A']
+    elif typ_cond_contorno['A'] == 'flu':
+        b[0, 1:Nx - 1] = dy * cond_contor['A'] / k
+
+    # ................. BORDE A / BORDE B .........................................................
+
+    if typ_cond_contorno['A'] == 'temp' and typ_cond_contorno['B'] == 'flu':
+        b[0, Nx - 1] = cond_contor['A']
+    elif typ_cond_contorno['A'] == 'flu' and typ_cond_contorno['B'] == 'temp':
+        b[0, Nx - 1] = cond_contor['B']
+    elif typ_cond_contorno['A'] == 'temp' and typ_cond_contorno['B'] == 'temp':
+        b[0, Nx - 1] = (cond_contor['A'] + cond_contor['B']) / 2
+
+    if typ_cond_contorno['B'] == 'temp':
+        b[1:Ny - 1, -1] = cond_contor['B']
+    elif typ_cond_contorno['B'] == 'flu':
+        b[1:Ny - 1, -1] = dx * cond_contor['B'] / k
+
+    # ................. BORDE B / BORDE C .........................................................
+    
+    if typ_cond_contorno['B'] == 'temp' and typ_cond_contorno['C'] == 'flu':
+        b[-1, -1] = cond_contor['B']
+    elif typ_cond_contorno['B'] == 'flu' and typ_cond_contorno['C'] == 'temp':
+        b[-1, -1] = cond_contor['C']
+    elif typ_cond_contorno['B'] == 'temp' and typ_cond_contorno['C'] == 'temp':
+        b[-1, -1] = (cond_contor['B'] + cond_contor['C']) / 2
+
+    if typ_cond_contorno['C'] == 'temp':
+        b[-1, 1:Nx - 1] = cond_contor['C']
+    elif typ_cond_contorno['C'] == 'flu':
+        b[-1, 1:Nx - 1] = dy * cond_contor['C'] / k
+
+    # ................. BORDE C / BORDE D .........................................................
+    
+    if typ_cond_contorno['C'] == 'temp' and typ_cond_contorno['D'] == 'flu':
+        b[-1, 0] = cond_contor['C']
+    elif typ_cond_contorno['C'] == 'flu' and typ_cond_contorno['D'] == 'temp':
+        b[-1, 0] = cond_contor['D']
+    elif typ_cond_contorno['C'] == 'temp' and typ_cond_contorno['D'] == 'temp':
+        b[-1, 0] = (cond_contor['C'] + cond_contor['D']) / 2
+
+    if typ_cond_contorno['D'] == 'temp':
+        b[1:Ny - 1, 0] = cond_contor['D']
+    elif typ_cond_contorno['D'] == 'flu':
+        b[1:Ny - 1, 0] = dx * cond_contor['D'] / k
+
+    
+    b = b.flatten()
+
+    # ================== ESQUINAS CON FLUJO-FLUJO ===================
+
+    # Esquina superior izquierda (A y D)
+    if typ_cond_contorno['A'] == 'flu' and typ_cond_contorno['D'] == 'flu':
+        idx = np.ravel_multi_index((0, 0), (Ny, Nx))
+        A[idx, :] = 0
+        A[idx, idx] = -2
+        A[idx, idx + 1] = 1
+        A[idx, idx + Nx] = 1
+        b[idx] = (dy * cond_contor['A'] + dx * cond_contor['D']) / k
+
+    # Esquina superior derecha (A y B)
+    if typ_cond_contorno['A'] == 'flu' and typ_cond_contorno['B'] == 'flu':
+        idx = np.ravel_multi_index((0, Nx - 1), (Ny, Nx))
+        A[idx, :] = 0
+        A[idx, idx] = -2
+        A[idx, idx - 1] = 1
+        A[idx, idx + Nx] = 1
+        b[idx] = (dy * cond_contor['A'] + dx * cond_contor['B']) / k
+
+    # Esquina inferior derecha (C y B)
+    if typ_cond_contorno['C'] == 'flu' and typ_cond_contorno['B'] == 'flu':
+        idx = np.ravel_multi_index((Ny - 1, Nx - 1), (Ny, Nx))
+        A[idx, :] = 0
+        A[idx, idx] = -2
+        A[idx, idx - 1] = 1
+        A[idx, idx - Nx] = 1
+        b[idx] = (dy * cond_contor['C'] + dx * cond_contor['B']) / k
+
+    # Esquina inferior izquierda (C y D)
+    if typ_cond_contorno['C'] == 'flu' and typ_cond_contorno['D'] == 'flu':
+        idx = np.ravel_multi_index((Ny - 1, 0), (Ny, Nx))
+        A[idx, :] = 0
+        A[idx, idx] = -2
+        A[idx, idx + 1] = 1
+        A[idx, idx - Nx] = 1
+        b[idx] = (dy * cond_contor['C'] + dx * cond_contor['D']) / k
+
+
+    #................. AJUSTES DE FLUJO ..........................................................................
+
+    if typ_cond_contorno['A'] == 'flu':
+        filaFlujo = 0
+        columnaFlujo = np.arange(1, Nx - 1)
+        indices_filas_int, indices_columnas_int = np.meshgrid(filaFlujo, columnaFlujo, indexing='ij')
+        indices = np.ravel_multi_index((indices_filas_int.flatten(), indices_columnas_int.flatten()), (Nx, Ny))
+        A[indices, indices] = -2 * (1 + beta ** 2)
+        A[indices, indices + 1] = 1
+        A[indices, indices - 1] = 1
+        A[indices, indices + Nx] = 2 * beta ** 2
+
+    if typ_cond_contorno['B'] == 'flu':
+        filaFlujo = np.arange(1, Ny - 1)
+        columnaFlujo = Nx - 1
+        indices_filas_int, indices_columnas_int = np.meshgrid(filaFlujo, columnaFlujo, indexing='ij')
+        indices = np.ravel_multi_index((indices_filas_int.flatten(), indices_columnas_int.flatten()), (Nx, Ny))
+        A[indices, indices] = -2 * (1 + beta ** 2)
+        A[indices, indices + Nx] = beta ** 2
+        A[indices, indices - Nx] = beta ** 2
+        A[indices, indices - 1] = 2
+
+    if typ_cond_contorno['C'] == 'flu':
+        filaFlujo = Ny - 1
+        columnaFlujo = np.arange(1, Nx - 1)
+        indices_filas_int, indices_columnas_int = np.meshgrid(filaFlujo, columnaFlujo, indexing='ij')
+        indices = np.ravel_multi_index((indices_filas_int.flatten(), indices_columnas_int.flatten()), (Nx, Ny))
+        A[indices, indices] = -2 * (1 + beta ** 2)
+        A[indices, indices + 1] = 1
+        A[indices, indices - 1] = 1
+        A[indices, indices - Nx] = 2 * beta ** 2
+
+    if typ_cond_contorno['D'] == 'flu':
+        filaFlujo = np.arange(1, Ny - 1)
+        columnaFlujo = 0
+        indices_filas_int, indices_columnas_int = np.meshgrid(filaFlujo, columnaFlujo, indexing='ij')
+        indices = np.ravel_multi_index((indices_filas_int.flatten(), indices_columnas_int.flatten()), (Nx, Ny))
+        A[indices, indices] = -2 * (1 + beta ** 2)
+        A[indices, indices + Nx] = beta ** 2
+        A[indices, indices - Nx] = beta ** 2
+        A[indices, indices + 1] = 2
+
+    #.................... AJUSTES DEL PUNTO CALIENTE ..................................................................
+
+    if hot_point is not None:
+        i_hp = hot_point['i']
+        j_hp = hot_point['j']
+        T_hp = hot_point['T']
+        idx_hp = np.ravel_multi_index((j_hp, i_hp), (Nx, Ny))
+        A[idx_hp, :] = 0
+        A[idx_hp, idx_hp] = 1
+        b[idx_hp] = T_hp
+
+    T = np.linalg.solve(A, b)
+
+    return T
+
+

@@ -52,3 +52,54 @@ def mostrar_tabla_variables_ordenada(cond_contor, typ_cond_contorno, hot_point, 
     print(tabulate(tabla_hot, headers=["i", "j", "Temp"], tablefmt="grid"))
 
     print(f"\nMaterial: {material_nombre}")
+
+def comparar_T(T1, T2, Nx, Ny, etiquetas=('Versión 1', 'Versión 2')):
+    """
+    Compara dos distribuciones de temperatura T1 y T2:
+    - Muestra las dos distribuciones lado a lado.
+    - Muestra la diferencia absoluta entre ellas.
+    - Calcula métricas de diferencia.
+
+    Parámetros:
+        T1, T2: arrays 1D o 2D de temperatura.
+        Nx, Ny: dimensiones de la malla.
+        etiquetas: tupla con etiquetas para las versiones.
+    """
+
+    # Asegura que tengan forma (Ny, Nx)
+    T1 = np.array(T1).reshape((Ny, Nx))
+    T2 = np.array(T2).reshape((Ny, Nx))
+    diferencia = np.abs(T1 - T2)
+
+    # Métricas de diferencia
+    diff_max = np.max(diferencia)
+    diff_mean = np.mean(diferencia)
+    diff_std = np.std(diferencia)
+
+    print(f"Comparación de distribuciones:")
+    print(f"Diferencia máxima: {diff_max:.4f} °C")
+    print(f"Diferencia media:  {diff_mean:.4f} °C")
+    print(f"Desvío estándar:   {diff_std:.4f} °C")
+
+    # Gráficos
+    fig, axs = plt.subplots(1, 3, figsize=(16, 4))
+
+    im0 = axs[0].imshow(T1, origin='lower', cmap='plasma')
+    axs[0].set_title(f'{etiquetas[0]}')
+    plt.colorbar(im0, ax=axs[0], fraction=0.046, pad=0.04)
+
+    im1 = axs[1].imshow(T2, origin='lower', cmap='plasma')
+    axs[1].set_title(f'{etiquetas[1]}')
+    plt.colorbar(im1, ax=axs[1], fraction=0.046, pad=0.04)
+
+    im2 = axs[2].imshow(diferencia, origin='lower', cmap='viridis')
+    axs[2].set_title('Diferencia absoluta |T1 - T2| [°C]')
+    plt.colorbar(im2, ax=axs[2], fraction=0.046, pad=0.04)
+
+    for ax in axs:
+        ax.set_xlabel('i (x)')
+        ax.set_ylabel('j (y)')
+
+    plt.suptitle('Comparación de distribuciones de temperatura')
+    plt.tight_layout()
+    plt.show()
