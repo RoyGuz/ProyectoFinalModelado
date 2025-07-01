@@ -112,7 +112,6 @@ def generar_dataset(n_muestras, Nx, Ny, dx, dy, subfolder_name = None):
     Y = []
     registros = []
 
-
     #   Bucle principal
     for i in range(n_muestras):
 
@@ -128,7 +127,7 @@ def generar_dataset(n_muestras, Nx, Ny, dx, dy, subfolder_name = None):
         tipo_D = tipo_map[typ_cond_contorno['D']]
         
         x_muestra = [
-
+            
             k,
             hot_point['T'],
             hot_point['i'],

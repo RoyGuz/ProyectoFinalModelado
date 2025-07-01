@@ -12,7 +12,7 @@ def index(i, j,Nx):
 def temp_chapa_P(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
 
     """
-    Resuelve el problema de conducción estacionaria 2D en una placa mediante diferencias finitas.
+    Esta funcion resuelve el problema de conducción estacionaria 2D en una placa mediante diferencias finitas.
 
     Parámetros:
 
@@ -173,10 +173,8 @@ def temp_chapa_P(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
 def temp_chapa_P2(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
 
     """
-    Resuelve el problema de conducción estacionaria 2D en una placa mediante diferencias finitas (VERSION ORIGINAL).
-
-            SE TIENE EL PROBLEMA DE LA INTERPRETACION DE LOS FLUJOS ... NO LOGRO IDENTIFICAR QUE ESTA MAL ... 
-            SI PONGO CONDICION DE 4 FLUJOS EN LOS BORDES ... SE PIERDE LA INFLUENCIA DEL PUNTO CALIENTE
+    Esta funcion resuelve el problema de conducción estacionaria 2D en una placa mediante diferencias finitas 
+    (VERSION ORIGINAL RESUELTA EN CLASE).
 
     Parámetros:
 
@@ -206,8 +204,6 @@ def temp_chapa_P2(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
     A[flat_indices, flat_indices + 1] = 1
     A[flat_indices, flat_indices - Nx] = beta ** 2
     A[flat_indices, flat_indices + Nx] = beta ** 2
-
-
 
     b = np.zeros((Nx, Ny))
 
@@ -266,13 +262,9 @@ def temp_chapa_P2(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
         b[1:Ny - 1, 0] = cond_contor['D']
     elif typ_cond_contorno['D'] == 'flu':
         b[1:Ny - 1, 0] = dx * cond_contor['D'] / k
-
-    
+   
     b = b.flatten()
 
-    # ================== ESQUINAS CON FLUJO-FLUJO ===================
-
-    # Esquina superior izquierda (A y D)
     if typ_cond_contorno['A'] == 'flu' and typ_cond_contorno['D'] == 'flu':
         idx = np.ravel_multi_index((0, 0), (Ny, Nx))
         A[idx, :] = 0
@@ -281,7 +273,6 @@ def temp_chapa_P2(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
         A[idx, idx + Nx] = 1
         b[idx] = (dy * cond_contor['A'] + dx * cond_contor['D']) / k
 
-    # Esquina superior derecha (A y B)
     if typ_cond_contorno['A'] == 'flu' and typ_cond_contorno['B'] == 'flu':
         idx = np.ravel_multi_index((0, Nx - 1), (Ny, Nx))
         A[idx, :] = 0
@@ -290,7 +281,6 @@ def temp_chapa_P2(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
         A[idx, idx + Nx] = 1
         b[idx] = (dy * cond_contor['A'] + dx * cond_contor['B']) / k
 
-    # Esquina inferior derecha (C y B)
     if typ_cond_contorno['C'] == 'flu' and typ_cond_contorno['B'] == 'flu':
         idx = np.ravel_multi_index((Ny - 1, Nx - 1), (Ny, Nx))
         A[idx, :] = 0
@@ -299,7 +289,6 @@ def temp_chapa_P2(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
         A[idx, idx - Nx] = 1
         b[idx] = (dy * cond_contor['C'] + dx * cond_contor['B']) / k
 
-    # Esquina inferior izquierda (C y D)
     if typ_cond_contorno['C'] == 'flu' and typ_cond_contorno['D'] == 'flu':
         idx = np.ravel_multi_index((Ny - 1, 0), (Ny, Nx))
         A[idx, :] = 0
@@ -308,48 +297,52 @@ def temp_chapa_P2(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
         A[idx, idx - Nx] = 1
         b[idx] = (dy * cond_contor['C'] + dx * cond_contor['D']) / k
 
-
-    #................. AJUSTES DE FLUJO ..........................................................................
+    # ............... AJUSTES DE FLUJO (q != 0) ..................................................................
 
     if typ_cond_contorno['A'] == 'flu':
-        filaFlujo = 0
-        columnaFlujo = np.arange(1, Nx - 1)
+        filaFlujo = np.zeros(Nx - 2, dtype=int)                   # j = 0
+        columnaFlujo = np.arange(1, Nx - 1, dtype=int)
         indices_filas_int, indices_columnas_int = np.meshgrid(filaFlujo, columnaFlujo, indexing='ij')
-        indices = np.ravel_multi_index((indices_filas_int.flatten(), indices_columnas_int.flatten()), (Nx, Ny))
-        A[indices, indices] = -2 * (1 + beta ** 2)
-        A[indices, indices + 1] = 1
-        A[indices, indices - 1] = 1
-        A[indices, indices + Nx] = 2 * beta ** 2
+        indices = np.ravel_multi_index((indices_filas_int.flatten(), indices_columnas_int.flatten()), (Ny, Nx))
 
-    if typ_cond_contorno['B'] == 'flu':
-        filaFlujo = np.arange(1, Ny - 1)
-        columnaFlujo = Nx - 1
-        indices_filas_int, indices_columnas_int = np.meshgrid(filaFlujo, columnaFlujo, indexing='ij')
-        indices = np.ravel_multi_index((indices_filas_int.flatten(), indices_columnas_int.flatten()), (Nx, Ny))
-        A[indices, indices] = -2 * (1 + beta ** 2)
-        A[indices, indices + Nx] = beta ** 2
-        A[indices, indices - Nx] = beta ** 2
-        A[indices, indices - 1] = 2
+        A[indices, :] = 0
+        A[indices, indices] = -1
+        A[indices, indices + Nx] = 1
+        b[indices] = dy * cond_contor['A'] / k
 
     if typ_cond_contorno['C'] == 'flu':
-        filaFlujo = Ny - 1
-        columnaFlujo = np.arange(1, Nx - 1)
+        filaFlujo = np.full(Nx - 2, Ny - 1, dtype=int)            # j = Ny - 1
+        columnaFlujo = np.arange(1, Nx - 1, dtype=int)
         indices_filas_int, indices_columnas_int = np.meshgrid(filaFlujo, columnaFlujo, indexing='ij')
-        indices = np.ravel_multi_index((indices_filas_int.flatten(), indices_columnas_int.flatten()), (Nx, Ny))
-        A[indices, indices] = -2 * (1 + beta ** 2)
-        A[indices, indices + 1] = 1
-        A[indices, indices - 1] = 1
-        A[indices, indices - Nx] = 2 * beta ** 2
+        indices = np.ravel_multi_index((indices_filas_int.flatten(), indices_columnas_int.flatten()), (Ny, Nx))
+
+        A[indices, :] = 0
+        A[indices, indices] = 1
+        A[indices, indices - Nx] = -1
+        b[indices] = dy * cond_contor['C'] / k
 
     if typ_cond_contorno['D'] == 'flu':
-        filaFlujo = np.arange(1, Ny - 1)
-        columnaFlujo = 0
+        filaFlujo = np.arange(1, Ny - 1, dtype=int)
+        columnaFlujo = np.zeros(Ny - 2, dtype=int)
         indices_filas_int, indices_columnas_int = np.meshgrid(filaFlujo, columnaFlujo, indexing='ij')
-        indices = np.ravel_multi_index((indices_filas_int.flatten(), indices_columnas_int.flatten()), (Nx, Ny))
-        A[indices, indices] = -2 * (1 + beta ** 2)
-        A[indices, indices + Nx] = beta ** 2
-        A[indices, indices - Nx] = beta ** 2
-        A[indices, indices + 1] = 2
+        indices = np.ravel_multi_index((indices_filas_int.flatten(), indices_columnas_int.flatten()), (Ny, Nx))
+
+        A[indices, :] = 0
+        A[indices, indices] = -1
+        A[indices, indices + 1] = 1
+        b[indices] = dx * cond_contor['D'] / k
+
+    if typ_cond_contorno['B'] == 'flu':
+        filaFlujo = np.arange(1, Ny - 1, dtype=int)
+        columnaFlujo = np.full(Ny - 2, Nx - 1, dtype=int)
+        indices_filas_int, indices_columnas_int = np.meshgrid(filaFlujo, columnaFlujo, indexing='ij')
+        indices = np.ravel_multi_index((indices_filas_int.flatten(), indices_columnas_int.flatten()), (Ny, Nx))
+
+        A[indices, :] = 0
+        A[indices, indices] = 1
+        A[indices, indices - 1] = -1
+        b[indices] = dx * cond_contor['B'] / k
+
 
     #.................... AJUSTES DEL PUNTO CALIENTE ..................................................................
 
@@ -365,5 +358,3 @@ def temp_chapa_P2(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
     T = np.linalg.solve(A, b)
 
     return T
-
-
