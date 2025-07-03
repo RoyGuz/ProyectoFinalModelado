@@ -1,6 +1,11 @@
+from pathlib import Path
 import sys
-sys.path.append('C:/Users/royer/Documents/ProyectoFinalModelado/scr')
+
+BASE_DIR = Path().resolve()
+sys.path.append(str(BASE_DIR.parent / 'scr'))
+
 from solver_fd import temp_chapa_P
+from sklearn.model_selection import train_test_split
 
 import pandas as pd
 import numpy as np
@@ -33,7 +38,8 @@ def variables(Nx, Ny):
 
     """
     #   Se busca el archivo CSV donde se tiene la lista de materiales
-    materiales_path='C:/Users/royer/Documents/ProyectoFinalModelado/data/materiales.csv'
+    materiales_path= BASE_DIR.parent / 'data' / 'materiales.csv'
+
     
     #   Se carga la lista de materiales
     df_materiales = pd.read_csv(materiales_path, sep=';')
@@ -79,7 +85,7 @@ def variables(Nx, Ny):
     
     hot_point = {'i': i_hp, 'j': j_hp, 'T': T_hp}
 
-    return cond_contor, typ_cond_contorno, hot_point, k, material_nombre
+    return cond_contor, typ_cond_contorno, hot_point, k, material_nombre,T_fusion
 
 #..............................................................................................................................................................
 #..............................................................................................................................................................
@@ -101,10 +107,18 @@ def generar_dataset(n_muestras, Nx, Ny, dx, dy, subfolder_name = None):
     Retorna:
         No se retorna ninguna variable.
     
-    Se generan 3 archivos:
+    Se generan 9 archivos:
         X (.npy): Datos de entrada para la Red Neuronal
         Y (.npy): Datos de salida para la Red Neuronal
-        registros (.csv): Combinaciones simuladas 
+        dataset_variables (.csv): Combinaciones simuladas
+
+        X_train (.npy): Datos de entrenamiento de entrada para la Red Neuronal
+        Y_train (.npy): Datos de entrenamiento de salida para la Red Neuronal
+        dataset_variables_train (.csv): Combinaciones de entrenamiento simuladas 
+
+        X_val (.npy): Datos de validacion de entrada para la Red Neuronal
+        Y_val (.npy): Datos de validacion de salida para la Red Neuronal
+        dataset_variables_val (.csv): Combinaciones de validacion simuladas 
 
     """
     #   Se definen las variables donde se almacenaran los datos para cada combinacion
@@ -116,7 +130,7 @@ def generar_dataset(n_muestras, Nx, Ny, dx, dy, subfolder_name = None):
     for i in range(n_muestras):
 
         #   Genero mis variables aleatorias
-        cond_contor, typ_cond_contorno, hot_point, k, material_nombre = variables(Nx, Ny)
+        cond_contor, typ_cond_contorno, hot_point, k, material_nombre,T_fusion = variables(Nx, Ny)
         
         #......................... DATOS DE ENTRADA ......................................
         tipo_map = {'temp': 0, 'flu': 1}
@@ -156,6 +170,7 @@ def generar_dataset(n_muestras, Nx, Ny, dx, dy, subfolder_name = None):
 
             'material': material_nombre,
             'k': k,
+            'T_fusion' : T_fusion,
             'T_hp': hot_point['T'],
             'i_hp': hot_point['i'],
             'j_hp': hot_point['j'],
@@ -178,9 +193,24 @@ def generar_dataset(n_muestras, Nx, Ny, dx, dy, subfolder_name = None):
     Y = np.array(Y)    
     df_registros = pd.DataFrame(registros)# Para convertir el diccionario "registros" en una fila para guardar.
 
+    T_min = Y.min(axis=1)
+    T_max = Y.max(axis=1)
+    T_fusion = df_registros['T_fusion'].values
+
+    idx_validos = (T_min >= -250) & (T_max <= (T_fusion - 10))
+
+    X = X[idx_validos]
+    Y = Y[idx_validos]
+    df_registros = df_registros.iloc[idx_validos].reset_index(drop=True)
+
+    print(f"\nFiltrado completado:")
+    print(f"Muestras originales: {n_muestras}")
+    print(f"Muestras después del filtrado: {len(Y)}")
+
+
     #................................ ALMACENAMIENTO DE DATOS .............................................................
     #   Defino la carpeta donde se guardaran los datos
-    base_folder = 'C:/Users/royer/Documents/ProyectoFinalModelado/data/'
+    base_folder = BASE_DIR.parent / 'data' 
 
     if subfolder_name is not None:
 
@@ -192,9 +222,25 @@ def generar_dataset(n_muestras, Nx, Ny, dx, dy, subfolder_name = None):
     else:
         save_folder = base_folder#  Esto es por si no se indico ninguna ruta
 
+        # Separación reproducible 70% entrenamiento y 30% validación
+    X_train, X_val, Y_train, Y_val, registros_train, registros_val = train_test_split(
+        X, Y, df_registros, test_size=0.3, random_state=42, shuffle=True)
+    
     # Guardado de archivos
     np.save(os.path.join(save_folder, 'X.npy'), X)
     np.save(os.path.join(save_folder, 'Y.npy'), Y)
     df_registros.to_csv(os.path.join(save_folder, 'dataset_variables.csv'), index=False, sep=';')
 
+    # Guardar datos de entrenamiento
+    np.save(os.path.join(save_folder, 'X_train.npy'), X_train)
+    np.save(os.path.join(save_folder, 'Y_train.npy'), Y_train)
+    registros_train.to_csv(os.path.join(save_folder, 'dataset_variables_train.csv'), index=False, sep=';')
+
+    # Guardar datos de validación
+    np.save(os.path.join(save_folder, 'X_val.npy'), X_val)
+    np.save(os.path.join(save_folder, 'Y_val.npy'), Y_val)
+    registros_val.to_csv(os.path.join(save_folder, 'dataset_variables_val.csv'), index=False, sep=';')
+
     print(f"Se genero el Dataset completo con {n_muestras} muestras y guardado en {save_folder}.")
+
+    print(f"Se genero la separacion del Dataset: entrenamiento (70%) y validación (30%)")
