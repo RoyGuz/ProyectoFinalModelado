@@ -43,11 +43,10 @@ def temp_chapa_P(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
                 b[idx] = hot_point['T']
                 continue
 
-            # ========== ESQUINAS: TEMP-TEMP y FLUJO-FLUJO ==========
+            #................ ESQUINAS: TEMP-TEMP y FLUJO-FLUJO ..............................
 
             esquina = False
 
-            # Esquina superior izquierda (A y D)
             if i == 0 and j == 0:
                 if typ_cond_contorno['A'] == 'temp' and typ_cond_contorno['D'] == 'temp':
                     A[idx, :] = 0
@@ -62,7 +61,6 @@ def temp_chapa_P(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
                     b[idx] = (dy * cond_contor['A'] + dx * cond_contor['D']) / k
                     esquina = True
 
-            # Esquina superior derecha (A y B)
             if i == Nx-1 and j == 0:
                 if typ_cond_contorno['A'] == 'temp' and typ_cond_contorno['B'] == 'temp':
                     A[idx, :] = 0
@@ -77,7 +75,6 @@ def temp_chapa_P(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
                     b[idx] = (dy * cond_contor['A'] + dx * cond_contor['B']) / k
                     esquina = True
 
-            # Esquina inferior derecha (C y B)
             if i == Nx-1 and j == Ny-1:
                 if typ_cond_contorno['C'] == 'temp' and typ_cond_contorno['B'] == 'temp':
                     A[idx, :] = 0
@@ -92,7 +89,6 @@ def temp_chapa_P(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
                     b[idx] = (dy * cond_contor['C'] + dx * cond_contor['B']) / k
                     esquina = True
 
-            # Esquina inferior izquierda (C y D)
             if i == 0 and j == Ny-1:
                 if typ_cond_contorno['C'] == 'temp' and typ_cond_contorno['D'] == 'temp':
                     A[idx, :] = 0
