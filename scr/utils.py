@@ -76,7 +76,7 @@ def comparar_T(T1, T2, Nx, Ny, etiquetas=('Versión 1', 'Versión 2')):
     diff_mean = np.mean(diferencia)
     diff_std = np.std(diferencia)
 
-    print(f"Comparación de distribuciones:")
+    print(f"\nComparación de distribuciones:")
     print(f"Diferencia máxima: {diff_max:.4f} °C")
     print(f"Diferencia media:  {diff_mean:.4f} °C")
     print(f"Desvío estándar:   {diff_std:.4f} °C")

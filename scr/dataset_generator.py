@@ -222,7 +222,7 @@ def generar_dataset(n_muestras, Nx, Ny, dx, dy, subfolder_name = None):
     else:
         save_folder = base_folder#  Esto es por si no se indico ninguna ruta
 
-        # Separación reproducible 70% entrenamiento y 30% validación
+    # Separación reproducible 70% entrenamiento y 30% validación
     X_train, X_val, Y_train, Y_val, registros_train, registros_val = train_test_split(
         X, Y, df_registros, test_size=0.3, random_state=42, shuffle=True)
     
