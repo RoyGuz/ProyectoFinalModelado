@@ -103,3 +103,38 @@ def comparar_T(T1, T2, Nx, Ny, etiquetas=('Versión 1', 'Versión 2')):
     plt.suptitle('Comparación de distribuciones de temperatura')
     plt.tight_layout()
     plt.show()
+
+
+import pandas as pd
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+def graficar_hist_k():
+    # ---------------- CONFIGURACIÓN ----------------
+    BASE_DIR = Path().resolve()
+
+    csv_path = BASE_DIR.parent / 'data' / 'materiales.csv'
+
+    df_materiales = pd.read_csv(csv_path, sep=';')
+
+    # ---------------- INSPECCIÓN DE COLUMNAS ----------------
+    print("Columnas disponibles en el CSV:")
+    print(df_materiales.columns)
+
+    # ---------------- GRAFICAR HISTOGRAMA DE k ----------------
+    columna_k = 'k [W/m·K]'
+
+    plt.figure(figsize=(10,5))
+    plt.hist(df_materiales[columna_k], bins=20, edgecolor='black')
+    plt.title("Distribución de la conductividad térmica (k) en materiales.csv")
+    plt.xlabel("k [W/m·K]")
+    plt.ylabel("Cantidad de materiales")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.tight_layout()
+    plt.show()
+
+    # ---------------- MOSTRAR ESTADÍSTICAS ----------------
+    print(f"Valor mínimo de k: {df_materiales[columna_k].min():.2f} W/m·K")
+    print(f"Valor máximo de k: {df_materiales[columna_k].max():.2f} W/m·K")
+    print(f"Valor medio de k: {df_materiales[columna_k].mean():.2f} W/m·K")
+    print(f"Desvío estándar de k: {df_materiales[columna_k].std():.2f} W/m·K")

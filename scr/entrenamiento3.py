@@ -12,9 +12,7 @@ from mlp_temp_regressor import MLPTempRegressor
 BASE_DIR = Path().resolve()
 
 def entrenar_modelo(X_path, Y_path, X_val_path, Y_val_path, subfolder_name, epochs, batch_size, lr):
-    """
-    Entrena el modelo MLP utilizando MSELoss y calcula val_loss en cada época.
-    """
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Dataset de entrenamiento ---------------------------------------------------------
@@ -75,9 +73,6 @@ def entrenar_modelo(X_path, Y_path, X_val_path, Y_val_path, subfolder_name, epoc
         
         loss_history.append(avg_loss)
 
-        # ================================
-        # Cálculo del val_loss en cada época
-        # ================================
         
         model.eval()
         
@@ -132,5 +127,5 @@ def entrenar_modelo(X_path, Y_path, X_val_path, Y_val_path, subfolder_name, epoc
     }
     np.save(save_folder / 'training_params.npy', params)
 
-    print(f"✅ Entrenamiento completado. Modelo guardado en {save_folder / 'model_train.pt'}")
+    print(f"Entrenamiento completado. Modelo guardado en {save_folder / 'model_train.pt'}")
 
