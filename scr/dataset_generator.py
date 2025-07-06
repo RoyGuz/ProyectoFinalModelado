@@ -241,6 +241,8 @@ def generar_dataset(n_muestras, Nx, Ny, dx, dy, subfolder_name = None):
     np.save(os.path.join(save_folder, 'Y_val.npy'), Y_val)
     registros_val.to_csv(os.path.join(save_folder, 'dataset_variables_val.csv'), index=False, sep=';')
 
-    print(f"Se genero el Dataset completo con {n_muestras} muestras y guardado en {save_folder}.")
+    # print(f"Se genero el Dataset completo con {n_muestras} muestras y guardado en {save_folder}.")
 
-    print(f"Se genero la separacion del Dataset: entrenamiento (70%) y validación (30%)")
+    # print(f"Se genero la separacion del Dataset: entrenamiento (70%) y validación (30%)")
+
+    return len(Y)
