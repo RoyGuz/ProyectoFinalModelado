@@ -9,7 +9,6 @@ from torch.utils.data import DataLoader
 from placa_dataset import PlacaDataset
 from mlp_temp_regressor import MLPTempRegressor
 from EarlyStopping import EarlyStopping
-from get_scheduler import get_scheduler
 
 BASE_DIR = Path().resolve()
 
@@ -51,7 +50,6 @@ BASE_DIR = Path().resolve()
 
 #     # Construir máscara (batch_size, N) en True donde está dentro del radio
 #     hot_mask = torch.zeros((batch_size, N), dtype=torch.bool, device=device)
-
 
 #     # Se itera sobre todas las muestras del batch
 #     for b in range(batch_size):
@@ -159,9 +157,7 @@ def entrenar_modelo(X_path, Y_path, X_val_path, Y_val_path, subfolder_name, epoc
     #------------------------------------------------------------------------------------
 
     early_stopper = EarlyStopping(patience=200, min_delta=1e-4, verbose=True)
-    #scheduler = get_scheduler(optimizer, factor=0.5, patience=50, min_lr=1e-6, verbose=True)
 
-	
     loss_history = []
     loss_radio_history = []
     loss_resto_history = []
@@ -240,9 +236,6 @@ def entrenar_modelo(X_path, Y_path, X_val_path, Y_val_path, subfolder_name, epoc
         val_loss_resto_history.append(avg_val_loss_resto)
 
         #..................................................................
-        # PASO 1: Scheduler
-        #scheduler.step(avg_val_loss)
-        # PASO 2: Early Stopping
         early_stopper(avg_val_loss)
         #..................................................................
 

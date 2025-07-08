@@ -197,7 +197,7 @@ def generar_dataset(n_muestras, Nx, Ny, dx, dy, subfolder_name = None):
     T_max = Y.max(axis=1)
     T_fusion = df_registros['T_fusion'].values
 
-    idx_validos = (T_min >= -250) & (T_max <= (T_fusion - 10))
+    idx_validos = (T_min >= -250) & (T_max <= (T_fusion - 10))  #   Filtro Booleano
 
     X = X[idx_validos]
     Y = Y[idx_validos]

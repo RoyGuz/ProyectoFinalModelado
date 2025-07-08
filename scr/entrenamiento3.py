@@ -73,7 +73,6 @@ def entrenar_modelo(X_path, Y_path, X_val_path, Y_val_path, subfolder_name, epoc
         
         loss_history.append(avg_loss)
 
-        
         model.eval()
         
         val_running_loss = 0.0

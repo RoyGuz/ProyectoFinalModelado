@@ -8,7 +8,6 @@ class PlacaDataset(Dataset):
         self.X = np.load(X_path).astype(np.float32)
         self.Y = np.load(Y_path).astype(np.float32)
 
-        # ---------------- StandardScaler en X ----------------
         self.mean_X = self.X.mean(axis=0)
         self.std_X = self.X.std(axis=0)
 
@@ -16,7 +15,6 @@ class PlacaDataset(Dataset):
         
         self.X = (self.X - self.mean_X) / self.std_X
 
-        # ---------------- StandardScaler en Y ----------------
         self.mean_Y = self.Y.mean()
         self.std_Y = self.Y.std()
 

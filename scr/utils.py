@@ -177,12 +177,12 @@ def compararLoss(subfolder_name_1,subfolder_name_2,aux):
     plt.tight_layout()
     plt.show()
 
-def compararLossM(subfolder_list, radios , aux, ylimits=None, xlimits=None):
+def compararLossM(subfolder_list , aux, ylimits=None, xlimits=None):
 
     BASE_DIR = Path().resolve()
     plt.figure(figsize=(10, 6))
 
-    for subfolder_name,radios in zip(subfolder_list,radios):
+    for subfolder_name in subfolder_list:
         save_folder = BASE_DIR.parent / 'results' / subfolder_name
 
         loss_train = np.load(save_folder / 'loss_history_Train.npy')
@@ -191,10 +191,10 @@ def compararLossM(subfolder_list, radios , aux, ylimits=None, xlimits=None):
         epochs = np.arange(len(loss_train))
 
         if aux == 0 or aux == 1:
-            plt.semilogy(epochs, loss_train,label=f'{subfolder_name} - Train - {radios}',linewidth=1, linestyle='--',marker='o', markersize=2)
+            plt.semilogy(epochs, loss_train,label=f'{subfolder_name} - Train',linewidth=1, linestyle='--',marker='o', markersize=2)
 
         if aux == 0 or aux == 2:
-            plt.semilogy(epochs, loss_val,label=f'{subfolder_name} - Val - {radios}',linewidth=1, linestyle=':',marker='s', markersize=2)
+            plt.semilogy(epochs, loss_val,label=f'{subfolder_name} - Val',linewidth=1, linestyle=':',marker='s', markersize=2)
 
     plt.xlabel('Epoch')
     plt.ylabel('Loss (MSE)')
