@@ -22,7 +22,7 @@ class PlacaDataset(Dataset):
 
         #self.std_Y[self.std_Y == 0] = 1.0  # Evitar división por cero
 
-                # Evitar división por cero
+        # Evitar división por cero
         if self.std_Y == 0:
             self.std_Y = 1.0
 

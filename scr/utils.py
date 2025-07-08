@@ -1,6 +1,15 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
+import pandas as pd
+from tabulate import tabulate
+import pandas as pd
+from pathlib import Path
+
+import torch
+import numpy as np
+from mlp_temp_regressor import MLPTempRegressor
+from solver_fd import temp_chapa_P,temp_chapa_P2
 
 def graficarChapa(T,Nx,Ny):
 
@@ -30,7 +39,6 @@ def graficarChapa(T,Nx,Ny):
 
 #....................................................................................................................
 
-from tabulate import tabulate
 
 def mostrar_tabla_variables_ordenada(cond_contor, typ_cond_contorno, hot_point, material_nombre):
 
@@ -53,7 +61,7 @@ def mostrar_tabla_variables_ordenada(cond_contor, typ_cond_contorno, hot_point, 
 
     print(f"\nMaterial: {material_nombre}")
 
-def comparar_T(T1, T2, Nx, Ny, etiquetas=('Versión 1', 'Versión 2')):
+def comparar_T(T1, T2, Nx, Ny, folder,etiquetas=('Versión 1', 'Versión 2')):
     """
     Compara dos distribuciones de temperatura T1 y T2:
     - Muestra las dos distribuciones lado a lado.
@@ -81,14 +89,19 @@ def comparar_T(T1, T2, Nx, Ny, etiquetas=('Versión 1', 'Versión 2')):
     print(f"Diferencia media:  {diff_mean:.4f} °C")
     print(f"Desvío estándar:   {diff_std:.4f} °C")
 
+    
+    # Determinar escala común
+    vmin = min(np.min(T1), np.min(T2))
+    vmax = max(np.max(T1), np.max(T2))
+
     # Gráficos
     fig, axs = plt.subplots(1, 3, figsize=(16, 4))
 
-    im0 = axs[0].imshow(T1, origin='lower', cmap='plasma')
+    im0 = axs[0].imshow(T1, origin='lower', cmap='plasma',vmin=vmin,vmax=vmax)
     axs[0].set_title(f'{etiquetas[0]}')
     plt.colorbar(im0, ax=axs[0], fraction=0.046, pad=0.04)
 
-    im1 = axs[1].imshow(T2, origin='lower', cmap='plasma')
+    im1 = axs[1].imshow(T2, origin='lower', cmap='plasma',vmin=vmin,vmax=vmax)
     axs[1].set_title(f'{etiquetas[1]}')
     plt.colorbar(im1, ax=axs[1], fraction=0.046, pad=0.04)
 
@@ -100,28 +113,22 @@ def comparar_T(T1, T2, Nx, Ny, etiquetas=('Versión 1', 'Versión 2')):
         ax.set_xlabel('i (x)')
         ax.set_ylabel('j (y)')
 
-    plt.suptitle('Comparación de distribuciones de temperatura')
+    plt.suptitle(f'Comparación de distribuciones de temperatura - {folder}')
     plt.tight_layout()
     plt.show()
 
 
-import pandas as pd
-import matplotlib.pyplot as plt
-from pathlib import Path
-
 def graficar_hist_k():
-    # ---------------- CONFIGURACIÓN ----------------
+
     BASE_DIR = Path().resolve()
 
     csv_path = BASE_DIR.parent / 'data' / 'materiales.csv'
 
     df_materiales = pd.read_csv(csv_path, sep=';')
 
-    # ---------------- INSPECCIÓN DE COLUMNAS ----------------
     print("Columnas disponibles en el CSV:")
     print(df_materiales.columns)
 
-    # ---------------- GRAFICAR HISTOGRAMA DE k ----------------
     columna_k = 'k [W/m·K]'
 
     plt.figure(figsize=(10,5))
@@ -133,8 +140,328 @@ def graficar_hist_k():
     plt.tight_layout()
     plt.show()
 
-    # ---------------- MOSTRAR ESTADÍSTICAS ----------------
     print(f"Valor mínimo de k: {df_materiales[columna_k].min():.2f} W/m·K")
     print(f"Valor máximo de k: {df_materiales[columna_k].max():.2f} W/m·K")
     print(f"Valor medio de k: {df_materiales[columna_k].mean():.2f} W/m·K")
     print(f"Desvío estándar de k: {df_materiales[columna_k].std():.2f} W/m·K")
+
+
+
+def compararLoss(subfolder_name_1,subfolder_name_2,aux):
+
+    BASE_DIR = Path().resolve()
+    save_folder_1 = BASE_DIR.parent / 'results' / subfolder_name_1
+    save_folder_2 = BASE_DIR.parent / 'results' / subfolder_name_2
+
+    loss_train_1 = np.load(save_folder_1 / 'loss_history_Train.npy')
+    loss_val_1 = np.load(save_folder_1 / 'loss_history_Val.npy')
+
+    loss_train_2 = np.load(save_folder_2 / 'loss_history_Train.npy')
+    loss_val_2 = np.load(save_folder_2 / 'loss_history_Val.npy')
+
+    plt.figure(figsize=(10, 6))
+
+    if aux == 0 or aux == 1:
+        plt.semilogy(loss_train_1, label=f'{subfolder_name_1} - Train', linewidth=1, linestyle='--', marker = 'o', markersize = 2)
+        plt.semilogy(loss_val_1, label=f'{subfolder_name_1} - Val', linewidth=1, linestyle='--', marker = 'o', markersize = 2)
+
+    if aux == 0 or aux == 2:
+        plt.semilogy(loss_train_2, label=f'{subfolder_name_2} - Train', linewidth=1, linestyle='--', marker = 'o', markersize = 2)
+        plt.semilogy(loss_val_2, label=f'{subfolder_name_2} - Val', linewidth=1, linestyle='--', marker = 'o', markersize = 2)
+
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss (MSE)')
+    plt.title('Comparación de Curvas de Pérdida de Modelos')
+    plt.legend()
+    plt.grid(True, which="both", ls="-", alpha=0.5)
+    plt.tight_layout()
+    plt.show()
+
+def compararLossM(subfolder_list, radios , aux, ylimits=None, xlimits=None):
+
+    BASE_DIR = Path().resolve()
+    plt.figure(figsize=(10, 6))
+
+    for subfolder_name,radios in zip(subfolder_list,radios):
+        save_folder = BASE_DIR.parent / 'results' / subfolder_name
+
+        loss_train = np.load(save_folder / 'loss_history_Train.npy')
+        loss_val = np.load(save_folder / 'loss_history_Val.npy')
+
+        epochs = np.arange(len(loss_train))
+
+        if aux == 0 or aux == 1:
+            plt.semilogy(epochs, loss_train,label=f'{subfolder_name} - Train - {radios}',linewidth=1, linestyle='--',marker='o', markersize=2)
+
+        if aux == 0 or aux == 2:
+            plt.semilogy(epochs, loss_val,label=f'{subfolder_name} - Val - {radios}',linewidth=1, linestyle=':',marker='s', markersize=2)
+
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss (MSE)')
+    plt.title('Comparación de las curvas de pérdida')
+    plt.legend()
+    plt.grid(True, which="both", ls="-", alpha=0.5)
+
+    if ylimits is not None:
+        plt.ylim(ylimits)
+    
+    if xlimits is not None:
+        plt.xlim(xlimits)
+
+    plt.tight_layout()
+    plt.show()
+
+#.........................................................................................................
+
+def graficar_tiempos(csv_path):
+
+    df = pd.read_csv(csv_path)
+
+    # Filtrar solo los casos con muestras válidas (evita errores si hubo n_validas = 0)
+    df = df[(df["n_filtrado_sec"] > 0) & (df["n_filtrado_par"] > 0)]
+
+    plt.figure(figsize=(8,5))
+    plt.plot(df["n_muestras"], df["tiempo_sec_s"]/60, marker='o', label="Secuencial")
+    plt.plot(df["n_muestras"], df["tiempo_par_s"]/60, marker='o', label="Paralelo")
+    plt.xlabel("Cantidad de muestras generadas")
+    plt.ylabel("Tiempo de ejecución [min]")
+    plt.title("Tiempo de ejecución: Secuencial vs Paralelo")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+#................................................................................................
+
+import time
+
+def validar_modelo(folder_data,folder_results,dato,idx_muestra=None,mostrar=True):
+
+    BASE_DIR = Path().resolve()
+
+    results_path = BASE_DIR.parent / 'results'/ folder_results
+    data_path = BASE_DIR.parent / 'data' / folder_data
+
+    # ------------------ Cargar datos ------------------
+
+    if dato == 'val':
+
+        X_data = np.load(data_path / 'X_val.npy').astype(np.float32)
+        Y_data = np.load(data_path / 'Y_val.npy').astype(np.float32)
+        df_variables = pd.read_csv(data_path / 'dataset_variables_val.csv', sep=';')
+
+        mean_X = np.load(results_path / 'val_mean_X.npy')
+        std_X = np.load(results_path / 'val_std_X.npy')
+        mean_Y = np.load(results_path / 'val_mean_Y.npy').item()
+        std_Y = np.load(results_path / 'val_std_Y.npy').item()
+
+    elif dato == 'train':
+                
+        X_data = np.load(data_path / 'X_train.npy').astype(np.float32)
+        Y_data = np.load(data_path / 'Y_train.npy').astype(np.float32)
+        df_variables = pd.read_csv(data_path / 'dataset_variables_train.csv', sep=';')
+
+        mean_X = np.load(results_path / 'mean_X.npy')
+        std_X = np.load(results_path / 'std_X.npy')
+        mean_Y = np.load(results_path / 'mean_Y.npy').item()
+        std_Y = np.load(results_path / 'std_Y.npy').item()
+
+    if idx_muestra is None:
+        idx_muestra = np.random.randint(len(X_data))
+
+    # ------------ CONSTRUIR TABLA --------------------------------------------------
+
+    registro = df_variables.iloc[idx_muestra]
+
+    cond_contor = {
+        'A': registro['valor_A'],
+        'B': registro['valor_B'],
+        'C': registro['valor_C'],
+        'D': registro['valor_D']
+    }
+
+    typ_cond_contorno = {
+        'A': registro['tipo_A'],
+        'B': registro['tipo_B'],
+        'C': registro['tipo_C'],
+        'D': registro['tipo_D']
+    }
+
+    hot_point = {
+        'T': registro['T_hp'],
+        'i': int(registro['i_hp']),
+        'j': int(registro['j_hp'])
+    }
+
+    material_nombre = registro['material']
+
+    # -------------------CARGAR MODELO --------------------------------
+
+    input_dim = X_data.shape[1]
+    output_dim = Y_data.shape[1]
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    model = MLPTempRegressor(input_dim, output_dim).to(device)
+
+    model_save_path = results_path / 'model_train.pt'
+
+    model.load_state_dict(torch.load(model_save_path, map_location=device))
+    model.eval()
+
+    #----------------------------------------------------------------------------
+
+    X_muestra = X_data[idx_muestra]
+    Y_true = Y_data[idx_muestra]
+
+    X_muestra_norm = (X_muestra - mean_X) / std_X
+
+    X_tensor = torch.tensor(X_muestra_norm).to(device)
+
+    start_time = time.perf_counter()
+
+    with torch.no_grad():   # Desactiva el calculo de gradientes ... "PyTorch construye el grafo de cómputo y almacena todos los tensores intermedios"
+        Y_pred_norm = model(X_tensor).cpu().numpy()
+
+    end_time = time.perf_counter()
+    tiempo_total = end_time - start_time
+
+    print(f"Tiempo de calculo con ML: {tiempo_total:.6f} segundos")
+
+    # ----------------------------------------------------------------------------------
+
+    start_time_1 = time.perf_counter()
+    T = temp_chapa_P(cond_contor, 50, 50, typ_cond_contorno, 0.05, 0.05, registro['k'], hot_point)
+    end_time_1 = time.perf_counter()
+    tiempo_fd_1 = end_time_1 - start_time_1
+
+    start_time_2 = time.perf_counter()
+    T = temp_chapa_P2(cond_contor, 50, 50, typ_cond_contorno, 0.05, 0.05, registro['k'], hot_point)
+    end_time_2 = time.perf_counter()
+    tiempo_fd_2 = end_time_2 - start_time_2
+
+    print(f"Tiempo de cálculo con MDF_1 (temp_chapa_P): {tiempo_fd_1:.6f} segundos")
+    print(f"Tiempo de cálculo con MDF_2 (temp_chapa_P): {tiempo_fd_2:.6f} segundos")
+
+    # ---------------- Desnormalización ----------------
+
+    Y_pred = Y_pred_norm * std_Y + mean_Y
+
+    # ---------------- Visualización muestra ----------------
+
+    Y_pred_img = Y_pred.reshape(50, 50)
+    Y_true_img = Y_true.reshape(50, 50)
+
+    print(f"\nSe muestra la muestra con índice: {idx_muestra}")
+
+    if mostrar:
+        mostrar_tabla_variables_ordenada(cond_contor, typ_cond_contorno, hot_point, material_nombre)
+
+
+    comparar_T(Y_true_img, Y_pred_img, 50, 50,folder_results ,etiquetas=('Valor Real', 'Predicción ML'))
+
+
+#............................................................................................................
+#...................... EN PROCESO ..........................................................................
+
+# def plot_rmse_losses_single(
+#     save_folder,
+#     loss_type='global',   # 'global', 'radio', 'resto', 'todos'
+#     unidades_fisicas=True
+# ):
+
+#     save_folder = Path(save_folder)
+
+#     # Cargar std_Y de entrenamiento y validación
+#     if unidades_fisicas:
+#         std_Y_train = np.load(save_folder / 'std_Y.npy')
+#         std_Y_val = np.load(save_folder / 'val_std_Y.npy')
+
+#         sigma_Y_train_squared = std_Y_train.item() ** 2
+#         sigma_Y_val_squared = std_Y_val.item() ** 2
+#     else:
+#         sigma_Y_train_squared = 1.0
+#         sigma_Y_val_squared = 1.0
+
+#     # Cargar históricos según loss_type
+#     if loss_type in ['global', 'todos']:
+#         loss_train = np.load(save_folder / 'loss_history_Train.npy')
+#         loss_val = np.load(save_folder / 'loss_history_Val.npy')
+#     if loss_type in ['radio', 'todos']:
+#         loss_radio_train = np.load(save_folder / 'loss_radio_history_Train.npy')
+#         loss_radio_val = np.load(save_folder / 'loss_radio_history_Val.npy')
+#     if loss_type in ['resto', 'todos']:
+#         loss_resto_train = np.load(save_folder / 'loss_resto_history_Train.npy')
+#         loss_resto_val = np.load(save_folder / 'loss_resto_history_Val.npy')
+
+#     # Convertir a RMSE en unidades físicas correctamente
+#     if loss_type in ['global', 'todos']:
+#         loss_train = np.sqrt(loss_train * sigma_Y_train_squared)
+#         loss_val = np.sqrt(loss_val * sigma_Y_val_squared)
+#     if loss_type in ['radio', 'todos']:
+#         loss_radio_train = np.sqrt(loss_radio_train * sigma_Y_train_squared)
+#         loss_radio_val = np.sqrt(loss_radio_val * sigma_Y_val_squared)
+#     if loss_type in ['resto', 'todos']:
+#         loss_resto_train = np.sqrt(loss_resto_train * sigma_Y_train_squared)
+#         loss_resto_val = np.sqrt(loss_resto_val * sigma_Y_val_squared)
+
+#     epochs = np.arange(len(loss_train))
+
+#     # ----------------- Gráficas -----------------
+#     plt.figure(figsize=(10, 6 if loss_type != 'todos' else 12))
+
+#     if loss_type == 'global':
+#         plt.plot(epochs, loss_train, label='Train')
+#         plt.plot(epochs, loss_val, '--', label='Val')
+#         plt.xlabel('Epoch')
+#         plt.ylabel('RMSE (°C)' if unidades_fisicas else 'RMSE (normalized)')
+#         plt.title('Evolución del RMSE - Global')
+#         plt.grid(True, which="both", ls="--", alpha=0.3)
+#         plt.legend()
+
+#     elif loss_type == 'radio':
+#         plt.plot(epochs, loss_radio_train, label='Train')
+#         plt.plot(epochs, loss_radio_val, '--', label='Val')
+#         plt.xlabel('Epoch')
+#         plt.ylabel('RMSE (°C)' if unidades_fisicas else 'RMSE (normalized)')
+#         plt.title('Evolución del RMSE - Zona Hot Point')
+#         plt.grid(True, which="both", ls="--", alpha=0.3)
+#         plt.legend()
+
+#     elif loss_type == 'resto':
+#         plt.plot(epochs, loss_resto_train, label='Train')
+#         plt.plot(epochs, loss_resto_val, '--', label='Val')
+#         plt.xlabel('Epoch')
+#         plt.ylabel('RMSE (°C)' if unidades_fisicas else 'RMSE (normalized)')
+#         plt.title('Evolución del RMSE - Resto de la Placa')
+#         plt.grid(True, which="both", ls="--", alpha=0.3)
+#         plt.legend()
+
+#     elif loss_type == 'todos':
+#         plt.subplot(3, 1, 1)
+#         plt.semilogy(epochs, loss_train, label='Train')
+#         plt.semilogy(epochs, loss_val, '--', label='Val')
+#         plt.ylabel('RMSE (°C)' if unidades_fisicas else 'RMSE')
+#         plt.title('Global')
+#         plt.grid(True, which="both", ls="--", alpha=0.3)
+#         plt.legend()
+
+#         plt.subplot(3, 1, 2)
+#         plt.semilogy(epochs, loss_radio_train, label='Train')
+#         plt.semilogy(epochs, loss_radio_val, '--', label='Val')
+#         plt.ylabel('RMSE (°C)' if unidades_fisicas else 'RMSE')
+#         plt.title('Hot Point')
+#         plt.grid(True, which="both", ls="--", alpha=0.3)
+#         plt.legend()
+
+#         plt.subplot(3, 1, 3)
+#         plt.semilogy(epochs, loss_resto_train, label='Train')
+#         plt.semilogy(epochs, loss_resto_val, '--', label='Val')
+#         plt.xlabel('Epoch')
+#         plt.ylabel('RMSE (°C)' if unidades_fisicas else 'RMSE')
+#         plt.title('Resto')
+#         plt.grid(True, which="both", ls="--", alpha=0.3)
+#         plt.legend()
+
+#     plt.tight_layout()
+#     plt.show()

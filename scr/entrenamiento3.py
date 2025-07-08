@@ -94,7 +94,7 @@ def entrenar_modelo(X_path, Y_path, X_val_path, Y_val_path, subfolder_name, epoc
         
         val_loss_history.append(avg_val_loss)
 
-        if epoch % 100 == 0 or epoch == epochs - 1:
+        if epoch % 50 == 0 or epoch == epochs - 1:
             print(f"Epoch {epoch}, Loss: {avg_loss:.6f}, Val_Loss: {avg_val_loss:.6f}")
             
     #------------------------------------------------------------------------------------------------------
@@ -111,6 +111,11 @@ def entrenar_modelo(X_path, Y_path, X_val_path, Y_val_path, subfolder_name, epoc
     np.save(save_folder / 'std_X.npy', dataset.std_X)
     np.save(save_folder / 'mean_Y.npy', dataset.mean_Y)
     np.save(save_folder / 'std_Y.npy', dataset.std_Y)
+
+    np.save(save_folder / 'val_mean_X.npy', val_dataset.mean_X)
+    np.save(save_folder / 'val_std_X.npy', val_dataset.std_X)
+    np.save(save_folder / 'val_mean_Y.npy', val_dataset.mean_Y)
+    np.save(save_folder / 'val_std_Y.npy', val_dataset.std_Y)
 
     torch.save(model.state_dict(), save_folder / 'model_train.pt')
     torch.save(model, save_folder / 'model_train_complete.pt')
