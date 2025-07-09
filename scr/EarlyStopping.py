@@ -1,5 +1,5 @@
 class EarlyStopping:
-    def __init__(self, patience=200, min_delta=1e-4, verbose=True):
+    def __init__(self, patience=100, min_delta=1e-3, verbose=True):
         """
         patience: cuántas epochs esperar sin mejora antes de detener
         min_delta: mejora mínima considerada como mejora válida
@@ -18,8 +18,7 @@ class EarlyStopping:
             self.counter = 0
         else:
             self.counter += 1
-            # ✅ Mostrar mensaje cada 20 pasos sin mejora
-            if self.verbose and (self.counter % 20 == 0):
+            if self.verbose and (self.counter % 10 == 0):
                 print(f"EarlyStopping: {self.counter}/{self.patience} sin mejora (best_loss={self.best_loss:.6f})")
             if self.counter >= self.patience:
                 if self.verbose:

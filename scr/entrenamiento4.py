@@ -115,6 +115,7 @@ def MSEcustom_batch(outputs, Y_batch, X_batch, radio, alfa, mean_X, std_X):
     loss_resto = ((outputs - Y_batch) ** 2)[~hot_mask].mean()
 
     loss = (1 - alfa) * loss_resto + alfa * loss_radio
+    #loss = loss_resto + alfa * loss_radio
 
     return loss, loss_radio, loss_resto
     
@@ -156,7 +157,7 @@ def entrenar_modelo(X_path, Y_path, X_val_path, Y_val_path, subfolder_name, epoc
     
     #------------------------------------------------------------------------------------
 
-    early_stopper = EarlyStopping(patience=200, min_delta=1e-4, verbose=True)
+    early_stopper = EarlyStopping(patience=100, min_delta=5e-3, verbose=True)
 
     loss_history = []
     loss_radio_history = []

@@ -74,7 +74,7 @@ def MSEcustom_batch0(outputs, Y_batch, X_batch, radio, alfa, mean_X, std_X):
     loss_radio = ((outputs - Y_batch) ** 2)[hot_mask].mean()
     loss_resto = ((outputs - Y_batch) ** 2)[~hot_mask].mean()
 
-    loss = (1 - alfa) * loss_resto + alfa * loss_radio
+    loss =  loss_resto + alfa * loss_radio
 
     return loss
 
