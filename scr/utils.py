@@ -1,36 +1,51 @@
-import numpy as np
-import scipy as sp
-import matplotlib.pyplot as plt
-import pandas as pd
-from tabulate import tabulate
-import pandas as pd
+import re
 from pathlib import Path
 
-import torch
 import numpy as np
-from mlp_temp_regressor import MLPTempRegressor
-from solver_fd import temp_chapa_P,temp_chapa_P2
+import scipy as sp
+import pandas as pd
+import matplotlib.pyplot as plt
 
-def graficarChapa(T,Nx,Ny):
+from tabulate import tabulate
+
+import torch
+
+from mlp_temp_regressor import MLPTempRegressor
+from solver_fd import temp_chapa_P, temp_chapa_P2
+
+
+def graficarChapa(T,Nx,Ny,titulo):
 
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    numSeparaciones = 100  
-    numLineas = 16     
+    vmin = np.min(T)
+    vmax = np.max(T)
 
-    mappable = ax.contourf(T.reshape(Nx, Ny), levels=numSeparaciones, origin='upper', cmap='plasma')
+    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams['font.serif'] = ['Arial']       # Estilos 'Arial', 'Calibri', etc.
+    plt.rcParams['font.size'] = 14               # tamaño base de toda la letra
+    plt.rcParams['axes.titlesize'] = 14          # tamaño del título del gráfico
+    plt.rcParams['axes.labelsize'] = 16          # tamaño de etiquetas de los ejes
+    plt.rcParams['xtick.labelsize'] =14         # tamaño de números en eje X
+    plt.rcParams['ytick.labelsize'] = 14         # tamaño de números en eje Y
+    plt.rcParams['legend.fontsize'] = 14         # tamaño del texto de la leyenda
+    plt.rcParams['figure.titlesize'] = 16        # título de toda la figura
 
-    levels = ax.contour(T.reshape(Nx, Ny), levels=numLineas, colors='k', linewidths=1,origin='upper')
+    numSeparaciones = 30  
+    numLineas = 15     
+
+    mappable = ax.contourf(T.reshape(Nx, Ny), levels=numSeparaciones, origin='lower', cmap='plasma',vmin=vmin,vmax=vmax)
+
+    levels = ax.contour(T.reshape(Nx, Ny), levels=numLineas, colors='k', linewidths=1,origin='lower')
 
     cbar = plt.colorbar(mappable)
-    cbar.set_label('T (°C)')
+    cbar.set_label('T [°C]')
 
-    ax.clabel(levels, inline=True, fontsize=10, fmt='%1.0f')
+    ax.clabel(levels, inline=True, fontsize=12, fmt='%1.0f')
 
-
-    ax.set_xlabel('i')
-    ax.set_ylabel('j')
-    ax.set_title('Distribución de Temperatura para una placa cuadrada')
+    ax.set_xlabel('i(x)')
+    ax.set_ylabel('j(y)')
+    ax.set_title(titulo)
 
     plt.tight_layout()
     plt.show()
@@ -40,7 +55,7 @@ def graficarChapa(T,Nx,Ny):
 #....................................................................................................................
 
 
-def mostrar_tabla_variables_ordenada(cond_contor, typ_cond_contorno, hot_point, material_nombre):
+def mostrar_tabla_variables_ordenada(cond_contor, typ_cond_contorno, material_nombre, hot_point=None):
 
     print("\n=== Condiciones de Contorno ===")
 
@@ -52,16 +67,17 @@ def mostrar_tabla_variables_ordenada(cond_contor, typ_cond_contorno, hot_point, 
 
     print(tabulate(tabla_contorno, headers=["Borde", "Tipo de condición", "Valor"], tablefmt="grid"))
 
-    print("\n=== Punto Caliente ===")
+    if hot_point is not None:
+        print("\n=== Punto Caliente ===")
 
-    tabla_hot = []
+        tabla_hot = []
 
-    tabla_hot = [[hot_point['i'], hot_point['j'], hot_point['T']]]
-    print(tabulate(tabla_hot, headers=["i", "j", "Temp"], tablefmt="grid"))
+        tabla_hot = [[hot_point['i'], hot_point['j'], hot_point['T']]]
+        print(tabulate(tabla_hot, headers=["i", "j", "Temp"], tablefmt="grid"))
 
     print(f"\nMaterial: {material_nombre}")
 
-def comparar_T(T1, T2, Nx, Ny, folder,etiquetas=('Versión 1', 'Versión 2'),escala=True):
+def comparar_T(T1, T2, Nx, Ny, folder,etiquetas=('Versión 1', 'Versión 2'),escala=True,titulo=True):
     """
     Compara dos distribuciones de temperatura T1 y T2:
     - Muestra las dos distribuciones lado a lado.
@@ -95,33 +111,49 @@ def comparar_T(T1, T2, Nx, Ny, folder,etiquetas=('Versión 1', 'Versión 2'),esc
     vmax = max(np.max(T1), np.max(T2))
 
     # Gráficos
-    fig, axs = plt.subplots(1, 3, figsize=(16, 4))
+    fig, axs = plt.subplots(1, 3, figsize=(16, 5))
+
+    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams['font.serif'] = ['Arial']       # Estilos 'Arial', 'Calibri', etc.
+    plt.rcParams['font.size'] = 14               # tamaño base de toda la letra
+    plt.rcParams['axes.titlesize'] = 14          # tamaño del título del gráfico
+    plt.rcParams['axes.labelsize'] = 16          # tamaño de etiquetas de los ejes
+    plt.rcParams['xtick.labelsize'] =14         # tamaño de números en eje X
+    plt.rcParams['ytick.labelsize'] = 14         # tamaño de números en eje Y
+    plt.rcParams['legend.fontsize'] = 14         # tamaño del texto de la leyenda
+    plt.rcParams['figure.titlesize'] = 16        # título de toda la figura
+
     if escala:
         im0 = axs[0].imshow(T1, origin='lower', cmap='plasma',vmin=vmin,vmax=vmax)
-        axs[0].set_title(f'{etiquetas[0]}')
-        plt.colorbar(im0, ax=axs[0], fraction=0.046, pad=0.04)
+        axs[0].set_title(f'{etiquetas[0]}',fontsize=16)
+        cbar0=plt.colorbar(im0, ax=axs[0], fraction=0.046, pad=0.04)
+        cbar0.set_label('T [°C]')
 
         im1 = axs[1].imshow(T2, origin='lower', cmap='plasma',vmin=vmin,vmax=vmax)
-        axs[1].set_title(f'{etiquetas[1]}')
-        plt.colorbar(im1, ax=axs[1], fraction=0.046, pad=0.04)
+        axs[1].set_title(f'{etiquetas[1]}',fontsize=16)
+        cbar1=plt.colorbar(im1, ax=axs[1], fraction=0.046, pad=0.04)
+        cbar1.set_label('T [°C]')
     else:
         im0 = axs[0].imshow(T1, origin='lower', cmap='plasma')
-        axs[0].set_title(f'{etiquetas[0]}')
-        plt.colorbar(im0, ax=axs[0], fraction=0.046, pad=0.04)
+        axs[0].set_title(f'{etiquetas[0]}',fontsize=16)
+        cbar0=plt.colorbar(im0, ax=axs[0], fraction=0.046, pad=0.04)
+        cbar0.set_label('T [°C]')
 
         im1 = axs[1].imshow(T2, origin='lower', cmap='plasma')
-        axs[1].set_title(f'{etiquetas[1]}')
-        plt.colorbar(im1, ax=axs[1], fraction=0.046, pad=0.04)
+        axs[1].set_title(f'{etiquetas[1]}',fontsize=16)
+        cbar1=plt.colorbar(im1, ax=axs[1], fraction=0.046, pad=0.04)
+        cbar1.set_label('T [°C]')
 
     im2 = axs[2].imshow(diferencia, origin='lower', cmap='viridis')
-    axs[2].set_title('Diferencia absoluta |T1 - T2| [°C]')
-    plt.colorbar(im2, ax=axs[2], fraction=0.046, pad=0.04)
-
+    axs[2].set_title('Diferencia absoluta |T1 - T2|',fontsize=16)
+    cbar2=plt.colorbar(im2, ax=axs[2], fraction=0.046, pad=0.04)
+    cbar2.set_label('T [°C]')
     for ax in axs:
         ax.set_xlabel('i (x)')
         ax.set_ylabel('j (y)')
-
-    plt.suptitle(f'Comparación de distribuciones de temperatura - {folder}')
+    if titulo is True:
+        plt.suptitle(f'Comparación de distribuciones de temperatura - {folder}')
+        print('Hola')
     plt.tight_layout()
     plt.show()
 
@@ -152,6 +184,44 @@ def graficar_hist_k():
     print(f"Valor máximo de k: {df_materiales[columna_k].max():.2f} W/m·K")
     print(f"Valor medio de k: {df_materiales[columna_k].mean():.2f} W/m·K")
     print(f"Desvío estándar de k: {df_materiales[columna_k].std():.2f} W/m·K")
+
+def graficar_histograma_temp(folder_name):
+
+    BASE_DIR = Path().resolve()
+    
+    Y_path = BASE_DIR.parent / 'data' / folder_name / 'Y.npy'
+    csv_path = BASE_DIR.parent / 'data' / folder_name / 'dataset_variables.csv'
+
+    # ---------------- CARGA DE DATOS ----------------
+    Y_data = np.load(Y_path).astype(np.float32)
+    df_registros = pd.read_csv(csv_path, sep=';')
+
+    Y_flat = Y_data.flatten()
+
+    plt.figure(figsize=(8,5))
+    plt.hist(Y_flat, bins=500, color='steelblue', edgecolor='blue')
+    plt.title(f"Distribución de temperaturas en {folder_name}")
+    plt.xlabel("Temperatura [°C]")
+    plt.ylabel("Frecuencia")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.tight_layout()
+    plt.show()
+
+    print(f"Estadísticas generales de {folder_name}:")
+    print(f"Temperatura mínima: {Y_flat.min():.2f} °C")
+    print(f"Temperatura máxima: {Y_flat.max():.2f} °C")
+    print(f"Temperatura media: {Y_flat.mean():.2f} °C")
+    print(f"Temperatura std: {Y_flat.std():.2f}")
+
+    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams['font.serif'] = ['Arial']       # Estilos 'Arial', 'Calibri', etc.
+    plt.rcParams['font.size'] = 14               # tamaño base de toda la letra
+    plt.rcParams['axes.titlesize'] = 14          # tamaño del título del gráfico
+    plt.rcParams['axes.labelsize'] = 14          # tamaño de etiquetas de los ejes
+    plt.rcParams['xtick.labelsize'] = 12         # tamaño de números en eje X
+    plt.rcParams['ytick.labelsize'] = 12         # tamaño de números en eje Y
+    plt.rcParams['legend.fontsize'] = 14         # tamaño del texto de la leyenda
+    plt.rcParams['figure.titlesize'] = 16        # título de toda la figura
 
 
 
@@ -260,7 +330,7 @@ def graficar_tiempos(csv_path):
 
 import time
 
-def validar_modelo(folder_data,folder_results,dato,idx_muestra=None,mostrar=True,escala=True):
+def validar_modelo(folder_data,folder_results,dato,idx_muestra=None,mostrar=True,escala=True,hotPoint=None):
 
     BASE_DIR = Path().resolve()
 
@@ -311,12 +381,12 @@ def validar_modelo(folder_data,folder_results,dato,idx_muestra=None,mostrar=True
         'C': registro['tipo_C'],
         'D': registro['tipo_D']
     }
-
-    hot_point = {
-        'T': registro['T_hp'],
-        'i': int(registro['i_hp']),
-        'j': int(registro['j_hp'])
-    }
+    if hotPoint is not None:
+        hot_point = {
+            'T': registro['T_hp'],
+            'i': int(registro['i_hp']),
+            'j': int(registro['j_hp'])
+        }
 
     material_nombre = registro['material']
 
@@ -356,12 +426,12 @@ def validar_modelo(folder_data,folder_results,dato,idx_muestra=None,mostrar=True
     # ----------------------------------------------------------------------------------
 
     start_time_1 = time.perf_counter()
-    T = temp_chapa_P(cond_contor, 50, 50, typ_cond_contorno, 0.05, 0.05, registro['k'], hot_point)
+    T = temp_chapa_P(cond_contor, 50, 50, typ_cond_contorno, 0.05, 0.05, registro['k'], hot_point=hotPoint)
     end_time_1 = time.perf_counter()
     tiempo_fd_1 = end_time_1 - start_time_1
 
     start_time_2 = time.perf_counter()
-    T = temp_chapa_P2(cond_contor, 50, 50, typ_cond_contorno, 0.05, 0.05, registro['k'], hot_point)
+    T = temp_chapa_P2(cond_contor, 50, 50, typ_cond_contorno, 0.05, 0.05, registro['k'], hot_point=hotPoint)
     end_time_2 = time.perf_counter()
     tiempo_fd_2 = end_time_2 - start_time_2
 
@@ -430,6 +500,7 @@ def comparar_MT(T1, T2,T_true, folder,etiquetas=('Versión 1', 'Versión 2'),aut
         im2 = axs[2].imshow(T2, origin='lower', cmap='plasma',vmin=vmin,vmax=vmax)
         axs[2].set_title(f'{etiquetas[1]}')
         plt.colorbar(im2, ax=axs[2], fraction=0.046, pad=0.04)
+
     else:
         
         fig, axs = plt.subplots(1, 3, figsize=(16, 4))
@@ -454,7 +525,7 @@ def comparar_MT(T1, T2,T_true, folder,etiquetas=('Versión 1', 'Versión 2'),aut
     plt.tight_layout()
     plt.show()
 
-def compararModelos(folder_data,folder_resultsM,dato,idx_muestra=None,mostrar=True,auto=True):
+def compararModelos(folder_data,folder_resultsM,dato,idx_muestra=None,mostrarTabla=True):
 
     BASE_DIR = Path().resolve()
     data_path = BASE_DIR.parent / 'data' / folder_data
@@ -524,9 +595,169 @@ def compararModelos(folder_data,folder_resultsM,dato,idx_muestra=None,mostrar=Tr
         'j': int(registro['j_hp'])
     }
     material_nombre = registro['material']
-    if mostrar:
-        mostrar_tabla_variables_ordenada(cond_contor, typ_cond_contorno, hot_point, material_nombre)
+    if mostrarTabla:
+        mostrar_tabla_variables_ordenada(cond_contor, typ_cond_contorno, material_nombre, hot_point=hot_point)
 
-    comparar_MT(y_results[0], y_results[1], Y_true_img,folder=f"{folder_resultsM[0]} vs {folder_resultsM[1]}",etiquetas=(f'{folder_resultsM[0]}', f'{folder_resultsM[1]}'),auto=auto)
+    return Y_true_img, y_results
+    
+
+    # comparar_T(Y_true_img, y_results[0], 50, 50, folder=None,etiquetas=(f'{folder_resultsM[0]}', f'{folder_resultsM[1]}'),escala=True,titulo=False)
+
+    # #comparar_MT(y_results[0], y_results[1], Y_true_img,folder=f"{folder_resultsM[0]} vs {folder_resultsM[1]}",etiquetas=(f'{folder_resultsM[0]}', f'{folder_resultsM[1]}'),auto=auto)
+    # # graficarChapaM(y_results[0], y_results[1], 50, 50, nombre1=f'{folder_resultsM[0]}', nombre2=f'{folder_resultsM[1]}')
+    # # graficarChapa(Y_true_img,50,50)
 
 
+def graficarChapaM(T1, T2, Nx, Ny, nombre1='Mapa 1', nombre2='Mapa 2'):
+
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+    numSeparaciones = 100  
+    numLineas = 16 
+
+    for ax, T, nombre in zip(axes, [T1, T2], [nombre1, nombre2]):
+        T_reshaped = T.reshape(Nx, Ny)
+        
+        mappable = ax.contourf(T_reshaped, levels=numSeparaciones, origin='lower', cmap='plasma')
+        levels = ax.contour(T_reshaped, levels=numLineas, colors='k', linewidths=1, origin='lower')
+
+        cbar = plt.colorbar(mappable, ax=ax)
+        cbar.set_label('T (°C)')
+
+        ax.clabel(levels, inline=True, fontsize=10, fmt='%1.0f')
+        ax.set_xlabel('i')
+        ax.set_ylabel('j')
+        ax.set_title(f'Distribución de Temperatura: {nombre}')
+
+    plt.tight_layout()
+    plt.show()
+
+def compararLossMN(subfolder_list, aux, ylimits=None, xlimits=None,
+                   radio=True, desnormalizar=True, usar_rmse=False,
+                   titulo=True, lista_nombres=None, titulo_figura=False):
+
+    BASE_DIR = Path().resolve()
+    fig, ax = plt.subplots(figsize=(9, 6))
+
+    for i, subfolder_name in enumerate(subfolder_list):
+        save_folder = BASE_DIR.parent / 'results' / subfolder_name
+
+        loss_train = np.load(save_folder / 'loss_history_Train.npy')
+        loss_val = np.load(save_folder / 'loss_history_Val.npy')
+
+        if radio: 
+            loss_radio_train = np.load(save_folder / 'loss_radio_history_Train.npy')
+            loss_radio_val = np.load(save_folder / 'loss_radio_history_Val.npy')
+            loss_resto_train = np.load(save_folder / 'loss_resto_history_Train.npy')
+            loss_resto_val = np.load(save_folder / 'loss_resto_history_Val.npy')
+
+        # EXTRAER N DEL NOMBRE
+        try:
+            N = int(subfolder_name.split('_')[1])
+        except:
+            print(f"⚠️ No se pudo extraer N del nombre {subfolder_name}. Desnormalización omitida.")
+            N = None
+
+        # DESNORMALIZAR SI SE INDICA
+        if desnormalizar and N is not None:
+            dataset_folder = BASE_DIR.parent / 'data' / f'dataset_{N}_test'
+            try:
+                std_Y = np.load(dataset_folder / 'std_Y.npy').item()
+                val_std_Y = np.load(dataset_folder / 'val_std_Y.npy').item()
+                loss_train *= (std_Y ** 2)
+                loss_val *= (val_std_Y ** 2)
+                if radio:
+                    loss_radio_train *= (std_Y ** 2)
+                    loss_radio_val *= (val_std_Y ** 2)
+                    loss_resto_train *= (std_Y ** 2)
+                    loss_resto_val *= (val_std_Y ** 2)
+            except Exception as e:
+                print(f"⚠️ No se pudo cargar std_Y para {subfolder_name}. Error: {e}")
+
+        # CALCULAR RMSE SI SE INDICA
+        if usar_rmse:
+            loss_train = np.sqrt(loss_train)
+            loss_val = np.sqrt(loss_val)
+            if radio:
+                loss_radio_train = np.sqrt(loss_radio_train)
+                loss_radio_val = np.sqrt(loss_radio_val)
+                loss_resto_train = np.sqrt(loss_resto_train)
+                loss_resto_val = np.sqrt(loss_resto_val)
+
+        epochs = np.arange(len(loss_train))
+
+        # Función auxiliar para imprimir RMSE final
+        def print_rmse_final(curva, nombre_curva):
+            valor_final = curva[-1] if usar_rmse else np.sqrt(curva[-1])
+            print(f"📈 {subfolder_name} | {nombre_curva} | RMSE final: {valor_final:.4f}")
+
+        # Construir nombre para la leyenda
+        if lista_nombres and i < len(lista_nombres):
+            nombre_legenda = lista_nombres[i]
+        else:
+            match = re.search(r'_(\d+)_', subfolder_name)
+            N_extract = int(match.group(1)) if match else None
+            nombre_legenda = f'N = {N_extract}' if titulo and N_extract is not None else subfolder_name
+
+        # GRAFICAR CURVAS
+        if aux == 0 or aux == 1:
+            plt.semilogy(epochs, loss_train,
+                         label=f'{nombre_legenda} - Train',
+                         linewidth=0.5, linestyle='--', marker='o', markersize=2)
+            print_rmse_final(loss_train, 'Train')
+
+        if aux == 0 or aux == 2:
+            plt.semilogy(epochs, loss_val,
+                         label=f'{nombre_legenda} - Val',
+                         linewidth=0.5, linestyle='--', marker='o', markersize=2)
+            print_rmse_final(loss_val, 'Val')
+
+        if aux == 3 or aux == 4:
+            plt.semilogy(epochs, loss_resto_train,
+                         label=f'{nombre_legenda} - Resto - Train',
+                         linewidth=1, linestyle='--', marker='o', markersize=2)
+            plt.semilogy(epochs, loss_radio_train,
+                         label=f'{nombre_legenda} - RADIO - Train',
+                         linewidth=1, linestyle='--', marker='o', markersize=2)
+            print_rmse_final(loss_resto_train, 'Resto - Train')
+            print_rmse_final(loss_radio_train, 'RADIO - Train')
+
+        if aux == 3 or aux == 5:
+            plt.semilogy(epochs, loss_resto_val,
+                         label=f'{nombre_legenda} - Resto - Val',
+                         linewidth=1, linestyle='--', marker='o', markersize=2)
+            plt.semilogy(epochs, loss_radio_val,
+                         label=f'{nombre_legenda} - RADIO - Val',
+                         linewidth=1, linestyle='--', marker='o', markersize=2)
+            print_rmse_final(loss_resto_val, 'Resto - Val')
+            print_rmse_final(loss_radio_val, 'RADIO - Val')
+
+    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams['font.serif'] = ['Arial']
+    plt.rcParams['font.size'] = 14
+    plt.rcParams['axes.titlesize'] = 18
+    plt.rcParams['axes.labelsize'] = 16
+    plt.rcParams['xtick.labelsize'] = 14
+    plt.rcParams['ytick.labelsize'] = 14
+    plt.rcParams['legend.fontsize'] = 14
+    plt.rcParams['figure.titlesize'] = 18
+
+    plt.xlabel('Época')
+    ylabel = 'RMSE [°C]' if usar_rmse else ('Loss (MSE desnormalizado)' if desnormalizar else 'Loss (MSE normalizado)')
+    plt.ylabel(ylabel)
+    plt.legend()
+    ax.grid(True, which='major', linestyle='-', linewidth=0.5, color='gray')
+    ax.minorticks_on()
+    ax.yaxis.grid(True, which='minor', linestyle='--', linewidth=0.7, color='gray')
+
+    if ylimits is not None:
+        plt.ylim(ylimits)
+    if xlimits is not None:
+        plt.xlim(xlimits)
+
+    if titulo_figura:  # 🔹 Título si se proporciona
+        plt.title(titulo_figura)
+
+
+    plt.tight_layout()
+    plt.show()

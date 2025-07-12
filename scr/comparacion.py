@@ -13,7 +13,6 @@ def comparar_tiempos(n_muestras_list, Nx, Ny, dx, dy):
     for n_muestras in n_muestras_list:
         print(f"\n=== Probando con {n_muestras} muestras ===")
 
-        # Secuencial
         start_time = time.time()
         n_validas_sec = generar_dataset(n_muestras, Nx, Ny, dx, dy, subfolder_name=f"test_secuencial_{n_muestras}")
         sec_time = time.time() - start_time
@@ -22,7 +21,6 @@ def comparar_tiempos(n_muestras_list, Nx, Ny, dx, dy):
         print(f"Tiempo secuencial: {sec_time:.2f} s")
         print(f"Muestras válidas post-filtrado (sec): {n_validas_sec}")
 
-        # Paralelo
         start_time = time.time()
         n_validas_par = generar_dataset_paralelo(n_muestras, Nx, Ny, dx, dy, subfolder_name=f"test_paralelo_{n_muestras}")
         par_time = time.time() - start_time
@@ -31,12 +29,10 @@ def comparar_tiempos(n_muestras_list, Nx, Ny, dx, dy):
         print(f"Tiempo paralelo: {par_time:.2f} s")
         print(f"Muestras válidas post-filtrado (par): {n_validas_par}")
 
-        # Speedup
         speedup = sec_time / par_time
         speedups.append(speedup)
         print(f"Speedup: {speedup:.2f}x más rápido en paralelo")
 
-    # Guardar resultados en CSV
     with open("benchmark_tiempos.csv", "w", newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow([

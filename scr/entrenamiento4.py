@@ -157,7 +157,7 @@ def entrenar_modelo(X_path, Y_path, X_val_path, Y_val_path, subfolder_name, epoc
     
     #------------------------------------------------------------------------------------
 
-    early_stopper = EarlyStopping(patience=100, min_delta=5e-3, verbose=True)
+    early_stopper = EarlyStopping(patience=100, min_delta=1e-4, verbose=True)
 
     loss_history = []
     loss_radio_history = []

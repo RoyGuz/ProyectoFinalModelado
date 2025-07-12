@@ -102,6 +102,7 @@ def generar_dataset_paralelo(n_muestras, Nx, Ny, dx, dy, subfolder_name=None):
     T_max = Y.max(axis=1)
     T_fusion = df_registros['T_fusion'].values
 
+    #idx_validos = (T_min >= -100000) & (T_max <= (T_fusion + 100000))
     idx_validos = (T_min >= -250) & (T_max <= (T_fusion - 10))
 
     X = X[idx_validos]
@@ -142,10 +143,10 @@ def generar_dataset_paralelo(n_muestras, Nx, Ny, dx, dy, subfolder_name=None):
 
 if __name__ == "__main__":
     generar_dataset_paralelo(
-        n_muestras=100,
+        n_muestras=1000,
         Nx=50,
         Ny=50,
         dx=0.05,
         dy=0.05,
-        subfolder_name="dataset_100_test_paralelo"
+        subfolder_name="Dataset de 1000 muestras con filtro"
     )

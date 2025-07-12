@@ -1,4 +1,12 @@
 import numpy as np
+import torch
+from pathlib import Path
+import pandas as pd
+BASE_DIR = Path().resolve()
+import sys
+sys.path.append(str(BASE_DIR.parent / 'scr'))
+import torch
+from mlp_temp_regressor import MLPTempRegressor
 
 def index(i, j,Nx):
     
@@ -354,3 +362,88 @@ def temp_chapa_P2(cond_contor, Nx, Ny, typ_cond_contorno, dx, dy, k, hot_point):
     T = np.linalg.solve(A, b)
 
     return T
+
+def armar_X_muestra(cond_contor, typ_cond_contorno, k, hot_point=None, incluir_hot_point=True):
+
+    """
+    Esta funcion genera el vector X_muestra en el orden requerido por el modelo:
+    
+    Si incluir_hot_point=True:
+        [k, T_hp, i_hp, j_hp, tipo_A, tipo_B, tipo_C, tipo_D, valor_A, valor_B, valor_C, valor_D]
+    Si incluir_hot_point=False:
+        [k, tipo_A, tipo_B, tipo_C, tipo_D, valor_A, valor_B, valor_C, valor_D]
+    """
+    
+    codificacion_tipo = {'flu': 1, 'temp': 0}
+
+    if incluir_hot_point:
+        if hot_point is None:
+            raise ValueError("Debe proporcionar 'hot_point' si 'incluir_hot_point=True'")
+        T_hp = hot_point['T']
+        i_hp = hot_point['i']
+        j_hp = hot_point['j']
+
+        X_muestra = [
+            k,
+            T_hp,
+            i_hp,
+            j_hp,
+            codificacion_tipo[typ_cond_contorno['A']],
+            codificacion_tipo[typ_cond_contorno['B']],
+            codificacion_tipo[typ_cond_contorno['C']],
+            codificacion_tipo[typ_cond_contorno['D']],
+            cond_contor['A'],
+            cond_contor['B'],
+            cond_contor['C'],
+            cond_contor['D']
+        ]
+
+    else:
+        X_muestra = [
+            k,
+            codificacion_tipo[typ_cond_contorno['A']],
+            codificacion_tipo[typ_cond_contorno['B']],
+            codificacion_tipo[typ_cond_contorno['C']],
+            codificacion_tipo[typ_cond_contorno['D']],
+            cond_contor['A'],
+            cond_contor['B'],
+            cond_contor['C'],
+            cond_contor['D']
+        ]
+
+    return X_muestra
+
+def predecirTemperaturaChapa(cond_contor, typ_cond_contorno, k, folder_results,hot_point, incluir_hot_point=True):
+    """
+    Esta funcion evalua para un conjunto de condiciones de entrada, la respuesta del modelo:
+    
+    """
+    X_muestra = armar_X_muestra(cond_contor, typ_cond_contorno, k, hot_point=hot_point, incluir_hot_point=incluir_hot_point)
+    
+    BASE_DIR = Path().resolve()
+    results_path = BASE_DIR.parent / 'results' / folder_results
+
+    mean_X = np.load(results_path / 'mean_X.npy')
+    std_X = np.load(results_path / 'std_X.npy')
+    mean_Y = np.load(results_path / 'mean_Y.npy').item()
+    std_Y = np.load(results_path / 'std_Y.npy').item()
+
+    X_muestra = np.array(X_muestra).astype(np.float32)
+    X_muestra_norm = (X_muestra - mean_X) / std_X
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    input_dim = len(X_muestra)
+    output_dim = 2500  # 50x50
+    model = MLPTempRegressor(input_dim, output_dim).to(device)
+    model_save_path = results_path / 'model_train.pt'
+    model.load_state_dict(torch.load(model_save_path, map_location=device))
+    model.eval()
+
+    X_tensor = torch.tensor(X_muestra_norm, device=device).unsqueeze(0)
+    with torch.no_grad():
+        Y_pred_norm = model(X_tensor).cpu().numpy().flatten()
+
+    Y_pred_img = (Y_pred_norm * std_Y + mean_Y).reshape(50,50)
+
+    return Y_pred_img

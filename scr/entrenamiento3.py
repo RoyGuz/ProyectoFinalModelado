@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 
 from placa_dataset import PlacaDataset
 from mlp_temp_regressor import MLPTempRegressor
+from EarlyStopping import EarlyStopping
 
 BASE_DIR = Path().resolve()
 
@@ -41,7 +42,9 @@ def entrenar_modelo(X_path, Y_path, X_val_path, Y_val_path, subfolder_name, epoc
     optimizer = optim.Adam(model.parameters(), lr=lr)
     
     #------------------------------------------------------------------------------------
-	
+    early_stopper = EarlyStopping(patience=150, min_delta=1e-5, verbose=True)
+
+
     loss_history = []
     val_loss_history = []
 
@@ -92,6 +95,14 @@ def entrenar_modelo(X_path, Y_path, X_val_path, Y_val_path, subfolder_name, epoc
         avg_val_loss = val_running_loss / len(val_loader)
         
         val_loss_history.append(avg_val_loss)
+
+        #..................................................................
+        early_stopper(avg_val_loss)
+        #..................................................................
+
+        if early_stopper.should_stop:
+            print(f"Entrenamiento detenido en epoch {epoch} por Early Stopping.")
+            break
 
         if epoch % 50 == 0 or epoch == epochs - 1:
             print(f"Epoch {epoch}, Loss: {avg_loss:.6f}, Val_Loss: {avg_val_loss:.6f}")
