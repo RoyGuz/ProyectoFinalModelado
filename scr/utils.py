@@ -73,7 +73,7 @@ def mostrar_tabla_variables_ordenada(cond_contor, typ_cond_contorno, material_no
         tabla_hot = []
 
         tabla_hot = [[hot_point['i'], hot_point['j'], hot_point['T']]]
-        print(tabulate(tabla_hot, headers=["i", "j", "Temp"], tablefmt="grid"))
+        print(tabulate(tabla_hot, headers=["i", "j", "Temp [°C]"], tablefmt="grid"))
 
     print(f"\nMaterial: {material_nombre}")
 
